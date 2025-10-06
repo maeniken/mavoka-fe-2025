@@ -9,7 +9,7 @@ import DashboardLayout2 from "@/app/components/dashboard/DashboardLayout2";
 import Filter from "@/app/components/dashboard/perusahaan/data-pelamar/filter";
 import Table from "@/app/components/dashboard/perusahaan/data-pelamar/table";
 import InterviewModal from "@/app/components/dashboard/perusahaan/data-pelamar/interviewModal";
-import TablePager from "@/app/components/dashboard/perusahaan/data-pelamar/tablePager";
+import Pagination from "@/app/components/dashboard/Pagination";
 import SuccessModal from "@/app/components/registrasi/PopupBerhasil";
 
 export default function PelamarListInner() {
@@ -61,14 +61,14 @@ export default function PelamarListInner() {
 
   async function handleAccept(id: string) {
     await onAccept(id);
-    setSuccessMsg("Pelamar telah Diterima.");
-    setSuccessOpen(true);
+    //setSuccessMsg("Pelamar telah Diterima.");
+    //setSuccessOpen(true);
   }
 
   async function handleReject(id: string) {
     await onReject(id);
-    setSuccessMsg("Pelamar telah Ditolak.");
-    setSuccessOpen(true);
+    //setSuccessMsg("Pelamar telah Ditolak.");
+    //setSuccessOpen(true);
   }
 
   return (
@@ -107,13 +107,17 @@ export default function PelamarListInner() {
           </div>
 
           {/* Pager */}
-          <TablePager
-            page={page}
-            totalPages={totalPages}
-            onPageChange={(p) => setPage(p)}
-            perPage={perPage}
-            onPerPageChange={(n) => setPerPage(n)}
-          />
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        perPage={perPage}
+        onPerPageChange={(n) => {
+          setPerPage(n);
+          setPage(1);
+        }}
+        perPageOptions={[5, 10, 20]}
+      />
         </div>
 
         <InterviewModal

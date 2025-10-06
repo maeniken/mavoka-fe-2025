@@ -17,19 +17,24 @@ export default function LpkCard({ data }: Props) {
 
   const websiteHost = data.web_lembaga?.replace(/^https?:\/\//i, "");
 
-  const [logoFailed, setLogoFailed] = useState(false);
-  const normalizedLogo = useMemo(() => {
-    if (!data.logoUrl || logoFailed) return null;
-    let src = data.logoUrl.trim();
+  // Kandidat logo berasal dari mapping LpkList
+  const logoCandidates: string[] = (data as any)._logoCandidates || (data.logoUrl ? [data.logoUrl] : []);
+  const [logoIdx, setLogoIdx] = useState(0);
+  const [allFailed, setAllFailed] = useState(false);
+  const activeLogo = useMemo(() => {
+    if (allFailed || !logoCandidates.length) return null;
+    const raw = logoCandidates[logoIdx];
+    if (!raw) return null;
+    let src = raw.trim();
     if (!/^https?:\/\//i.test(src)) {
-      if (!src.startsWith('/')) src = '/' + src; // pastikan leading slash
+      if (!src.startsWith('/')) src = '/' + src;
       if (/^\/(logos|storage)\//.test(src)) {
         const base = (process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000').replace(/\/$/, '');
-        src = base + src; // jadikan absolute
+        src = base + src;
       }
     }
     return src;
-  }, [data.logoUrl, logoFailed]);
+  }, [logoCandidates, logoIdx, allFailed]);
 
   const initials = useMemo(() => {
     const parts = (data.name || '').trim().split(/\s+/).slice(0,2);
@@ -76,15 +81,26 @@ export default function LpkCard({ data }: Props) {
             className="h-[64px] w-[64px] rounded-full bg-white grid place-items-center
                     border border-[#E5E7EB] shadow-[0_2px_4px_rgba(0,0,0,0.15)] overflow-hidden"
           >
-            {normalizedLogo ? (
+            {activeLogo ? (
               <div className="relative h-[56px] w-[56px] rounded-full overflow-hidden bg-white">
                 <Image
-                  src={normalizedLogo}
+                  src={activeLogo}
                   alt={`${data.name} logo`}
                   fill
                   className="object-cover"
                   sizes="56px"
-                  onError={() => setLogoFailed(true)}
+                  onError={() => {
+                    console.debug('[LpkCard] gagal load logo', activeLogo);
+                    setLogoIdx(i => {
+                      const next = i + 1;
+                      if (next >= logoCandidates.length) {
+                        setAllFailed(true);
+                        console.warn('[LpkCard] semua kandidat gagal', logoCandidates);
+                        return i; // tetap
+                      }
+                      return next;
+                    });
+                  }}
                 />
               </div>
             ) : (

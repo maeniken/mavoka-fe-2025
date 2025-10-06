@@ -64,7 +64,7 @@ export default function Footer() {
                       <a href="/tentang-mavoka">Tentang MAVOKA</a>
                     </li>
                     <li>
-                      <a href="/cari-lowongan">Cari lowongan</a>
+                      <a href="/lowongan">Cari lowongan</a>
                     </li>
                     <li>
                       <a href="/list-perusahaan">Perusahaan</a>

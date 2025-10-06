@@ -12,6 +12,7 @@ export default function ChangePasswordStep3({
   otp,
   setOtp,
   onFinish,
+  onBack,
 }: ChangePasswordStep3Props) {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const [timeLeft, setTimeLeft] = useState(600); // 600 detik = 10 menit
@@ -57,7 +58,17 @@ export default function ChangePasswordStep3({
       <h2 className="font-bold mb-1">Masukan Kode</h2>
       <p className="text-black mb-4">
         Kami telah mengirimkan kode ke{" "}
-        <span className="font-semibold">Lisaaja@gmail.com</span>
+        <span className="font-semibold">
+          {(() => {
+            try {
+              const raw = localStorage.getItem('user');
+              const user = raw ? JSON.parse(raw) : {};
+              return user.email || '';
+            } catch {
+              return '';
+            }
+          })()}
+        </span>
       </p>
 
       <div className="flex justify-center gap-2 mb-4">
@@ -78,25 +89,34 @@ export default function ChangePasswordStep3({
         ))}
       </div>
 
-      <p className="text-sm mb-6 flex justify-between items-end">
+      <p className="text-sm mb-6 flex justify-between items-center">
         <span className="text-black">
           Belum mendapatkan kode?{" "}
-          <span className="text-[#0F67B1] font-semibold cursor-pointer">
+          <span className="text-[#0F67B1] font-semibold ml-1 cursor-pointer hover:underline">
             Kirim ulang
           </span>
         </span>
-        <span className="text-[#0F67B1] mb-5 font-semibold">
+        <span className="text-[#0F67B1] font-semibold">
           Waktu tersisa: {formatTime(timeLeft)}
         </span>
       </p>
 
-      <button
-        onClick={onFinish}
-        className="bg-[#0F67B1] text-white px-6 py-2 rounded"
-        disabled={timeLeft <= 0}
-      >
-        Lanjutkan
-      </button>
+      <div className="flex justify-center gap-2">
+        <button
+          onClick={onBack}
+          className="border px-4 py-2 rounded"
+        >
+          Kembali
+        </button>
+
+        <button
+          onClick={onFinish}
+          className="bg-[#0F67B1] text-white px-6 py-2 rounded"
+          disabled={timeLeft <= 0}
+        >
+          Lanjutkan
+        </button>
+      </div>
     </div>
   );
 }

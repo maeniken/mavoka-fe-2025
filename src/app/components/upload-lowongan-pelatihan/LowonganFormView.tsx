@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState, ChangeEvent, FormEvent } from "react";
+import { useMemo, useState, ChangeEvent, FormEvent, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { IoArrowBack } from "react-icons/io5";
 import SuccessModal from "@/app/components/registrasi/PopupBerhasil";
 import type { Lowongan, CreateLowonganPayload } from "@/types/lowongan";
 
 export type LowonganFormMode = "create" | "edit-draft" | "edit-terpasang" | "detail";
-
 type ActionType = "draft" | "unggah" | "save";
 
 type Props = {
@@ -18,14 +18,20 @@ type Props = {
   onUnggah?: (payload: CreateLowonganPayload, id?: number) => void;
   onSave?: (payload: CreateLowonganPayload, id?: number) => void;
 
+  /** aksi mana yang perlu menampilkan popup sukses */
   successFor?: ActionType[];
+  /** pesan default (fallback) jika successMessageDraft/ Unggah tidak diberikan */
   successMessage?: string;
+  /** pesan khusus ketika klik “Simpan Draft” */
+  successMessageDraft?: string;
+  /** pesan khusus ketika klik “Unggah” */
+  successMessageUnggah?: string;
+
+  /** dipanggil setelah popup sukses ditutup */
   onSuccessClose?: (action: ActionType) => void;
 };
 
-const textToArray = (s: string) =>
-  s.split(/\r?\n|;/).map((x) => x.trim()).filter(Boolean);
-
+const textToArray = (s: string) => s.split(/\r?\n|;/).map((x) => x.trim()).filter(Boolean);
 const arrayToText = (arr?: string[]) => (arr && arr.length ? arr.join("\n") : "");
 
 const emptyForm = {
@@ -50,8 +56,24 @@ export default function LowonganFormView({
   onSave,
   successFor = [],
   successMessage,
+  successMessageDraft,
+  successMessageUnggah,
   onSuccessClose,
 }: Props) {
+  const pathname = usePathname();
+
+  // pastikan mode konsisten berdasar URL
+  const effectiveMode: LowonganFormMode = useMemo(() => {
+    if (pathname?.includes("/upload-lowongan/edit/draft/")) return "edit-draft";
+    if (pathname?.includes("/upload-lowongan/edit/terpasang/")) return "edit-terpasang";
+    if (pathname?.includes("/upload-lowongan/detail/")) return "detail";
+    return mode;
+  }, [pathname, mode]);
+
+  useEffect(() => {
+    console.log("[LowonganFormView] mode =", mode, "effective =", effectiveMode, "path =", pathname);
+  }, [mode, effectiveMode, pathname]);
+
   const [form, setForm] = useState({
     posisi: initial?.posisi ?? emptyForm.posisi,
     deskripsi: initial?.deskripsi ?? emptyForm.deskripsi,
@@ -66,12 +88,13 @@ export default function LowonganFormView({
   });
 
   const [showSuccess, setShowSuccess] = useState(false);
+  const [successText, setSuccessText] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<ActionType | null>(null);
 
-  const readOnly = mode === "detail";
-  const canShowDraft = mode === "create";
-  const canShowUnggah = mode === "create" || mode === "edit-draft";
-  const canShowSimpan = mode === "edit-draft" || mode === "edit-terpasang";
+  const readOnly = effectiveMode === "detail";
+  const canShowDraft = effectiveMode === "create" || effectiveMode === "edit-draft";
+  const canShowUnggah = effectiveMode === "create" || effectiveMode === "edit-draft";
+  const canShowSimpan = effectiveMode === "edit-terpasang";
 
   function onChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
@@ -93,15 +116,23 @@ export default function LowonganFormView({
     keuntungan: textToArray(form.keuntungan),
   });
 
-  const trigger = (
-    action: ActionType,
-    fn?: (p: CreateLowonganPayload, id?: number) => void
-  ) => {
+  const getSuccessMessage = (action: ActionType) => {
+    if (action === "draft") return successMessageDraft ?? successMessage ?? "Perubahan berhasil disimpan.";
+    if (action === "unggah") return successMessageUnggah ?? successMessage ?? "Perubahan berhasil disimpan.";
+    return successMessage ?? "Perubahan berhasil disimpan.";
+  };
+
+  const trigger = (action: ActionType, fn?: (p: CreateLowonganPayload, id?: number) => void) => {
     const payload = buildPayload();
     const id = typeof initial?.id === "number" ? initial.id : undefined;
     fn?.(payload, id);
+
     setLastAction(action);
-    if (successMessage && successFor.includes(action)) {
+
+    // pilih pesan sesuai action
+    const msg = getSuccessMessage(action);
+    if (successFor.includes(action) && msg) {
+      setSuccessText(msg);
       setShowSuccess(true);
     }
   };
@@ -111,6 +142,11 @@ export default function LowonganFormView({
   }
 
   const subtitle = "Pastikan informasi data lowongan terisi dengan benar.";
+
+  // Style input sesuai spek
+  const inputBase =
+    "mt-1 w-full rounded border px-3 py-2 text-sm disabled:bg-gray-100 " +
+    "placeholder-[#858585] text-black border-[#B7B7B7] focus:border-[#0F67B1] focus:outline-none";
 
   const footerButtons = useMemo(() => {
     if (readOnly) return null;
@@ -157,6 +193,8 @@ export default function LowonganFormView({
     onSave,
     successFor,
     successMessage,
+    successMessageDraft,
+    successMessageUnggah,
     form,
   ]);
 
@@ -164,13 +202,13 @@ export default function LowonganFormView({
     <div className="w-full">
       <button
         onClick={onBack ?? (() => history.back())}
-        className="flex items-center gap-1 text-xl font-semibold mb-6 py-0 px-0 shadow-none bg-none"
+        className="flex items-center gap-1 text-xl font-semibold mb-4 py-0 px-0 shadow-none bg-none"
       >
         <IoArrowBack className="text-xl" />
         Kembali
       </button>
 
-      <div className="w-full bg-white p-6 rounded-lg">
+      <div className="w-full bg-white p-5 rounded-lg">
         <h3 className="font-semibold text-lg mb-1">Data Lowongan</h3>
         <p className="mb-6 text-sm text-gray-600">{subtitle}</p>
         <hr className="border-t border-gray-300 mb-6" />
@@ -185,7 +223,7 @@ export default function LowonganFormView({
               onChange={onChange}
               readOnly={readOnly}
               placeholder="Masukkan posisi..."
-              className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
+              className={inputBase}
             />
           </div>
 
@@ -198,7 +236,7 @@ export default function LowonganFormView({
               readOnly={readOnly}
               placeholder="Masukkan Deskripsi..."
               rows={4}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
+              className={inputBase}
             />
           </div>
 
@@ -211,7 +249,7 @@ export default function LowonganFormView({
               onChange={onChange}
               readOnly={readOnly}
               placeholder="Masukkan kuota..."
-              className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
+              className={inputBase}
             />
           </div>
 
@@ -223,33 +261,32 @@ export default function LowonganFormView({
               value={form.deadline_lamaran}
               onChange={onChange}
               readOnly={readOnly}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
+              className={inputBase}
             />
           </div>
 
-          <div className="grid grid-cols-1 desktop:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold">Periode Mulai Magang</label>
-              <input
-                type="date"
-                name="mulaiMagang"
-                value={form.mulaiMagang}
-                onChange={onChange}
-                readOnly={readOnly}
-                className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold">Periode Selesai Magang</label>
-              <input
-                type="date"
-                name="selesaiMagang"
-                value={form.selesaiMagang}
-                onChange={onChange}
-                readOnly={readOnly}
-                className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
-              />
-            </div>
+          <div>
+            <label className="block font-semibold">Periode Mulai Magang</label>
+            <input
+              type="date"
+              name="mulaiMagang"
+              value={form.mulaiMagang}
+              onChange={onChange}
+              readOnly={readOnly}
+              className={inputBase}
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold">Periode Selesai Magang</label>
+            <input
+              type="date"
+              name="selesaiMagang"
+              value={form.selesaiMagang}
+              onChange={onChange}
+              readOnly={readOnly}
+              className={inputBase}
+            />
           </div>
 
           <div>
@@ -261,7 +298,7 @@ export default function LowonganFormView({
               onChange={onChange}
               readOnly={readOnly}
               placeholder="Masukkan lokasi penempatan..."
-              className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
+              className={inputBase}
             />
           </div>
 
@@ -274,7 +311,7 @@ export default function LowonganFormView({
               readOnly={readOnly}
               placeholder="Masukkan tugas dan tanggungjawab... (pisahkan baris/semicolon)"
               rows={4}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
+              className={inputBase}
             />
           </div>
 
@@ -287,7 +324,7 @@ export default function LowonganFormView({
               readOnly={readOnly}
               placeholder="Masukkan persyaratan... (pisahkan baris/semicolon)"
               rows={4}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
+              className={inputBase}
             />
           </div>
 
@@ -300,7 +337,7 @@ export default function LowonganFormView({
               readOnly={readOnly}
               placeholder="Masukkan keuntungan... (pisahkan baris/semicolon)"
               rows={4}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm text-[#3a3a3a] disabled:bg-gray-100"
+              className={inputBase}
             />
           </div>
 
@@ -311,7 +348,7 @@ export default function LowonganFormView({
       <SuccessModal
         open={showSuccess}
         title="Berhasil"
-        message={successMessage ?? "Perubahan berhasil disimpan"}
+        message={successText ?? successMessage ?? "Perubahan berhasil disimpan"}
         onClose={() => {
           setShowSuccess(false);
           if (lastAction) onSuccessClose?.(lastAction);

@@ -47,7 +47,7 @@ export default function ConfirmLogoutDialog({ open, onClose, onConfirm }: Props)
               </button>
               <button
                 onClick={onClose}
-                className="flex items-center justify-center h-11 w-48 rounded-md bg-[#0F67B1] text-white hover:bg-[#0F67B1]/80 font-semibold transition"
+                className="flex items-center justify-center h-11 w-32 rounded-md bg-[#0F67B1] text-white hover:bg-[#0F67B1]/80 font-semibold transition"
               >
                 Tidak
               </button>

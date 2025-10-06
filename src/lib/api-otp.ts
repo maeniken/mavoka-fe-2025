@@ -17,3 +17,16 @@ export async function verifyOtp({
   });
   return res.data;
 }
+
+export async function resendOtp({
+  email,
+  role,
+}: {
+  email: string;
+  role: string;
+}) {
+  const res = await axios.post(`${API_BASE_URL}/resend-otp/${role}`, {
+    email,
+  });
+  return res.data;
+}

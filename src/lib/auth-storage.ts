@@ -40,3 +40,35 @@ export function resolveRoleId(role: Role): number | null {
     return typeof n === "number" && !Number.isNaN(n) ? n : null;
   } catch { return null; }
 }
+
+/**
+ * Hapus semua data autentikasi yang disimpan di localStorage.
+ * Menghapus keys umum dan semua key yang dimulai dengan `access_token_` atau `id_`.
+ */
+export function clearAuth() {
+  if (!isClient()) return;
+  try {
+    const removeExact = ["token", "user", "role", "actor", "login_at"];
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith("access_token_") || k.startsWith("id_")) {
+        localStorage.removeItem(k);
+      }
+    }
+    for (const k of removeExact) localStorage.removeItem(k);
+  } catch (e) {
+    console.warn("clearAuth failed", e);
+  }
+}
+
+/**
+ * Periksa apakah sesi sudah melewati timeout (default 1 jam).
+ * Mengembalikan true jika sesi sudah expired atau tidak ada timestamp.
+ */
+export function isSessionExpired(timeoutMs = 1000 * 60 * 60): boolean {
+  if (!isClient()) return true;
+  const raw = localStorage.getItem("login_at");
+  if (!raw) return true;
+  const at = Number(raw);
+  if (Number.isNaN(at)) return true;
+  return Date.now() - at >= timeoutMs;
+}

@@ -9,16 +9,19 @@ interface AkunViewProps {
   form: any;
   setForm: (data: any) => void;
   onChangePassword: () => void;
+  onShowToast?: (message: string, type: 'success' | 'error') => void;
+  userId?: number | null;
+  role?: 'lpk' | 'perusahaan' | 'siswa' | 'sekolah' | 'admin';
 }
 
-export default function AkunView({ form, setForm, onChangePassword }: AkunViewProps) {
+export default function AkunView({ form, setForm, onChangePassword, onShowToast, userId, role = 'lpk' }: AkunViewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const fields = [
     {
-      label: "Username",
-      value: form.username,
+      label: "Username", // Field username untuk login, bukan nama perusahaan
+      value: (form.username === 'Belum diatur' || !form.username) ? 'Belum diatur' : form.username,
       icon: (
         <HiOutlinePencilAlt
           className="text-[#0F67B1] cursor-pointer"
@@ -73,7 +76,15 @@ export default function AkunView({ form, setForm, onChangePassword }: AkunViewPr
         isOpen={isModalOpen}
         currentUsername={form.username}
         onClose={() => setIsModalOpen(false)}
-        onSave={(newUsername) => setForm({ ...form, username: newUsername })}
+        onSave={(newUsername) => {
+          setForm({ ...form, username: newUsername });
+          if (onShowToast) {
+            onShowToast('Username berhasil diperbarui', 'success');
+          }
+        }}
+        onShowToast={onShowToast}
+        userId={userId}
+        role={role}
       />
     </>
   );

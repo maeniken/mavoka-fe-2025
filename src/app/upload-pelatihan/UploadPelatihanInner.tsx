@@ -59,7 +59,7 @@ export default function UploadPelatihanInner({
       {isFormLikePage ? (
         <div className="p-6">{children}</div>
       ) : (
-        <div className="flex flex-col h-full p-6">
+        <div className="flex flex-col h-full p-5">
           <h3 className="mb-5">Data Pelatihan Magang</h3>
 
           <div className="flex items-center justify-between shrink-0">

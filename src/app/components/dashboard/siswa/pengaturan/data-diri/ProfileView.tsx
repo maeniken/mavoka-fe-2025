@@ -10,8 +10,8 @@ export default function ProfileView({ form }: ProfileViewProps) {
     { label: "Tanggal Lahir", value: form.birthDate, colSpan: 1 },
     { label: "Nomor Handphone", value: form.phone, colSpan: 2 },
     { label: "Alamat", value: form.address, colSpan: 2 },
-    { label: "Kota", value: form.city, colSpan: 1 },
     { label: "Provinsi", value: form.province, colSpan: 1 },
+    { label: "Kota", value: form.city, colSpan: 1 },
   ];
 
   return (

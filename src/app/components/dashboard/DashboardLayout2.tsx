@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import TopNavbar from "./topNavbar";
 import Sidebar from "./sidebar";
+import RequireAuth from "@/app/components/auth/RequireAuth";
 
 type Role = "siswa" | "sekolah" | "lpk" | "perusahaan";
 
@@ -47,24 +48,26 @@ export default function DashboardLayout2({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        role={role}
-        isOpen={isOpen}
-        setIsOpen={setIsOpen}
-        mobileOpen={mobileOpen}
-        setMobileOpen={setMobileOpen}
-      />
-
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <TopNavbar
-          variant={variant}
-          settingsHref={settingsHref}
-          hasNotification
-          onMobileOpen={() => setMobileOpen(true)}
+    <RequireAuth role={role}>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar
+          role={role}
+          isOpen={isOpen}
+          setIsOpen={setIsOpen}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
         />
-        <main className="flex-1 overflow-y-auto p-2 bg-gray-50">{children}</main>
+
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <TopNavbar
+            variant={variant}
+            settingsHref={settingsHref}
+            hasNotification
+            onMobileOpen={() => setMobileOpen(true)}
+          />
+          <main className="flex-1 overflow-y-auto p-2 bg-gray-50">{children}</main>
+        </div>
       </div>
-    </div>
+    </RequireAuth>
   );
 }

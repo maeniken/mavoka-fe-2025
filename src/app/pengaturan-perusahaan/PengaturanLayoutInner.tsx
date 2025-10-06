@@ -37,7 +37,7 @@ export default function PengaturanLayoutInner() {
     <DashboardLayout2 role="perusahaan">
       <div className="flex flex-col h-full p-6">
         {/* Tabs */}
-        <div className="flex bg-white shrink-0">
+        <div className="flex shrink-0">
           <ToggleTabs<TabType>
             tabs={tabs}
             value={currentTab}

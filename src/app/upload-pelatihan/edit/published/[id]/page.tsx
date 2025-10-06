@@ -57,7 +57,10 @@ export default function EditPublishedPelatihanPage() {
   if (!item || !initial) return <div className="p-6">Data tidak ditemukan.</div>;
 
   return (
-    <div className="p-6">
+    <div className="px-6
+      pt-1 tablet:pt-2 pb-6 -mt-3 tablet:-mt-4
+      space-y-5
+      -mx-2 tablet:-mx-3 desktop:-mx-6">
       <PelatihanFormView
         mode="editPublished"
         title="Ubah Data Pelatihan"

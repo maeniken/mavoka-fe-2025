@@ -3,12 +3,10 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
-import DashboardLayout2 from "@/app/components/dashboard/DashboardLayout2";
 import ToggleTabs from "@/app/components/dashboard/toggleTab";
 
 import TableDraftLowongan from "@/app/components/upload-lowongan-pelatihan/TableDraftLowongan";
 import TableLowonganTerpasang from "@/app/components/upload-lowongan-pelatihan/TableLowonganTerpasang";
-import LowonganFormView from "@/app/components/upload-lowongan-pelatihan/LowonganFormView";
 
 const tabs = [
   { text: "Draft", value: "draft" },
@@ -17,16 +15,11 @@ const tabs = [
 
 type TabType = (typeof tabs)[number]["value"];
 
-type UploadLowonganLayoutProps = {
-  view?: string;
-};
-
-export default function UploadLowonganInner({ view }: UploadLowonganLayoutProps) {
+export default function UploadLowonganInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Cek token perusahaan (hanya logging, nanti bisa dipakai API)
   useEffect(() => {
     const actor = localStorage.getItem("actor");
     const token =
@@ -35,8 +28,6 @@ export default function UploadLowonganInner({ view }: UploadLowonganLayoutProps)
     console.log("👤 actor:", actor);
     console.log("🔑 token_perusahaan:", token ? token.slice(0, 20) + "..." : null);
   }, []);
-
-  const isLowonganBaruPage = pathname === "/upload-lowongan/lowongan-baru";
 
   const currentTab: TabType = useMemo(() => {
     const q = (searchParams.get("tab") || "draft").toLowerCase();
@@ -50,40 +41,39 @@ export default function UploadLowonganInner({ view }: UploadLowonganLayoutProps)
   };
 
   return (
-    <DashboardLayout2 role="perusahaan">
-      {isLowonganBaruPage ? (
-        <div className="p-6">
-          <LowonganFormView
-            mode="create"
-            onSaveDraft={() => {}}
-            onUnggah={() => {
-              router.replace("/upload-lowongan?tab=terpasang");
-            }}
-            successMessage="Lowongan berhasil diunggah."
-          />
-        </div>
-      ) : (
-        <div className="flex flex-col h-full p-6">
-          <h3 className="mb-5">Lowongan Perusahaan</h3>
+    <div className="flex flex-col h-full p-6">
+      <h3 className="mb-5">Lowongan Perusahaan</h3>
 
-          <div className="flex items-center justify-between">
-            <div className="h-10 flex items-center">
-              <ToggleTabs<TabType> tabs={tabs} value={currentTab} onChange={handleChange} />
-            </div>
+{/* HEADER: tabs kiri + tombol kanan (tanpa scroll, kompak di mobile) */}
+<div className="flex items-start justify-between gap-2 sm:gap-3">
+  {/* Tabs: ikut kecilkan font di mobile agar muat */}
+  <div className="flex-1 min-w-0 h-10 flex items-center text-[13px] sm:text-base">
+    <ToggleTabs<TabType> tabs={tabs} value={currentTab} onChange={handleChange} />
+  </div>
 
-            <Link
-              href="/upload-lowongan/lowongan-baru"
-              className="h-10 inline-flex items-center px-4 rounded-lg bg-[#0F67B1] text-white font-medium hover:bg-[#0d5692] transition"
-            >
-              + Buat Lowongan Baru
-            </Link>
-          </div>
+  {/* Tombol: + kiri, 'Lowongan' atas, 'Baru' bawah; kompak di mobile */}
+  <Link
+    href="/upload-lowongan/lowongan-baru"
+    className="
+      shrink-0
+      grid grid-cols-[auto_1fr] grid-rows-[auto_auto] items-center
+      gap-x-2 px-3 py-2 sm:px-4 rounded-lg
+      bg-[#0F67B1] text-white hover:bg-[#0d5692] transition text-left
+      leading-tight
+      max-w-[150px] sm:max-w-[220px]  
+    "
+    aria-label="Tambah lowongan baru"
+  >
+    <span className="row-span-2 text-lg sm:text-xl leading-none">+</span>
+    <span className="text-xs sm:text-sm ">Lowongan</span>
+    <span className="text-xs sm:text-sm ">Baru</span>
+  </Link>
+</div>
 
-          <div className="flex-1 overflow-y-auto p-6 mt-5 bg-white h-full rounded-xl">
-            {currentTab === "draft" ? <TableDraftLowongan /> : <TableLowonganTerpasang />}
-          </div>
-        </div>
-      )}
-    </DashboardLayout2>
+
+      <div className="flex-1 overflow-y-auto p-6 mt-5 bg-white h-full rounded-xl">
+        {currentTab === "draft" ? <TableDraftLowongan /> : <TableLowonganTerpasang />}
+      </div>
+    </div>
   );
 }

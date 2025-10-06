@@ -32,19 +32,6 @@ export default function AkunView({ form, setForm, onChangePassword }: AkunViewPr
       value: showPassword ? form.password : "••••••••",
       icon: (
         <div className="flex items-center gap-2">
-          {showPassword ? (
-            <FaEye
-              size={20}
-              className="text-gray-600 cursor-pointer"
-              onClick={() => setShowPassword(false)}
-            />
-          ) : (
-            <FaEyeSlash
-              size={20}
-              className="text-gray-600 cursor-pointer"
-              onClick={() => setShowPassword(true)}
-            />
-          )}
           <IoIosArrowForward
             className="text-[#0F67B1] cursor-pointer"
             size={20}

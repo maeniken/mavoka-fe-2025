@@ -1,6 +1,8 @@
 "use client";
 import React from "react";
 import { BiSolidFilePdf } from "react-icons/bi";
+import useMyApplications from "@/lib/useMyApplications";
+
 
 export type ApplicationStatus =
   | "lamar"
@@ -20,16 +22,101 @@ export type Application = {
 };
 
 type Props = {
-  data: Application[];
-  onAccept: (id: string) => void;
-  onReject: (id: string) => void;
+  // optional: if provided by parent the table will render this data;
+  // otherwise the table will fetch the current siswa's applications itself.
+  data?: Application[];
+  onAccept?: (id: string) => void;
+  onReject?: (id: string) => void;
 };
 
-export default function StudentApplicationsTable({
-  data,
-  onAccept,
-  onReject,
-}: Props) {
+export default function StudentApplicationsTable({ data, onAccept, onReject }: Props) {
+  // fallback handlers
+  const noop = () => {};
+  const accept = onAccept ?? noop;
+  const reject = onReject ?? noop;
+
+  // if parent didn't provide `data`, fetch from API
+  const { loading: apiLoading, error: apiError, data: apiItems } = useMyApplications();
+
+  // Ambil id siswa saat ini dari localStorage (tidak pakai state global agar sederhana)
+  let currentSiswaId: string | null = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('user');
+      if (raw) {
+        const u = JSON.parse(raw);
+        currentSiswaId = String(u.id ?? u.siswa_id ?? '');
+      }
+    } catch {}
+  }
+
+  // Debug panel: tampilkan data mentah dan hasil filter
+  const [showDebug, setShowDebug] = React.useState(false);
+  const filteredRaw = Array.isArray(apiItems)
+    ? apiItems.filter((row: any) => {
+        if (!currentSiswaId) return true;
+        const sid = row.siswa_id ?? row.siswaId ?? (row.siswa && row.siswa.id);
+        return sid ? String(sid) === currentSiswaId : true;
+      })
+    : [];
+
+  // Panel debug opsional: tekan tombol untuk tampilkan JSON apiItems
+  const debugPanel = (
+    <div className="mb-4 rounded-md border p-3 bg-yellow-50 text-xs text-gray-800">
+      <div className="font-semibold mb-1">Debug: Data apiItems (raw dari API)</div>
+      <pre className="whitespace-pre-wrap break-words max-h-64 overflow-auto">{JSON.stringify(apiItems, null, 2)}</pre>
+    </div>
+  );
+  // (duplicate debug state removed to fix redeclaration error)
+
+  // map backend item shape to Application expected by this table
+  const mapApiItem = (a: any): Application => {
+    // Perusahaan: utamakan nama_perusahaan
+    let perusahaan =
+      a.nama_perusahaan ||
+      a.perusahaan_nama ||
+      a.perusahaan ||
+      (a.perusahaanObj && (a.perusahaanObj.nama || a.perusahaanObj.name)) ||
+      a.asalSekolah ||
+      (a.perusahaan_id && typeof a.perusahaan_id === 'object' && (a.perusahaan_id.nama || a.perusahaan_id.name)) ||
+      "-";
+
+    // Penempatan: utamakan lokasi_penempatan
+    let penempatan =
+      a.lokasi_penempatan ||
+      a.penempatan ||
+      (a.lokasi && (a.lokasi.nama || a.lokasi.name)) ||
+      (a.alamat ? String(a.alamat).split(",")[0] : null) ||
+      (a.perusahaanObj && a.perusahaanObj.alamat) ||
+      (a.perusahaan_id && typeof a.perusahaan_id === 'object' && a.perusahaan_id.alamat) ||
+      "-";
+
+    return {
+      id: String(a.id ?? a.pelamar_id ?? ""),
+      posisi: a.posisi ?? a.posisi_name ?? a.posisiId ?? "-",
+      perusahaan,
+      penempatan,
+      cvUrl: a.cvUrl ?? a.cv_url ?? null,
+      transkripUrl: a.transkripUrl ?? a.transkrip_url ?? null,
+      status: (a.status as ApplicationStatus) || (a.status_lamaran as ApplicationStatus) || "lamar",
+    };
+  };
+
+  const sourceData: Application[] | null = data
+    ? data
+    : Array.isArray(apiItems)
+    ? apiItems
+        // filter: kalau endpoint /pelamar mengembalikan semua lamaran, batasi milik siswa login saja
+        .filter((row: any) => {
+          if (!currentSiswaId) return true; // jika tidak bisa baca user, tampilkan apa adanya
+            const sid = row.siswa_id ?? row.siswaId ?? (row.siswa && row.siswa.id);
+            return sid ? String(sid) === currentSiswaId : true;
+        })
+        .map(mapApiItem)
+    : apiLoading
+    ? null
+    : [];
+
   const headers = [
     "NO",
     "POSISI",
@@ -51,6 +138,8 @@ export default function StudentApplicationsTable({
     "w-52 whitespace-nowrap", // aksi
   ];
 
+  // Note: Selalu render tabel. Saat loading (sourceData null) tampilkan skeleton di tbody.
+
   return (
     <div className="bg-white rounded-md p-4 shadow">
       {/* wrapper scrollable */}
@@ -71,42 +160,52 @@ export default function StudentApplicationsTable({
             </tr>
           </thead>
           <tbody>
-            {data.map((a, idx) => (
-              <tr
-                key={a.id}
-                className="border-b text-xs text-center hover:bg-gray-50 last:border-b-0"
-              >
-                <td className="px-4 py-4">{idx + 1}</td>
-                <td className="px-4 py-4">{a.posisi}</td>
-                <td className="px-4 py-4">{a.perusahaan}</td>
-                <td className="px-4 py-4">{a.penempatan}</td>
-                <td className="px-4 py-4 text-center">
-                  {a.cvUrl ? (
-                    <PdfButton url={a.cvUrl} title="Lihat CV" />
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-4 text-center">
-                  {a.transkripUrl ? (
-                    <PdfButton url={a.transkripUrl} title="Lihat Transkrip" />
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-4 text-center whitespace-nowrap">
-                  <StatusChip status={a.status} />
-                </td>
-                <td className="px-4 py-4 text-center">
-                  <ActionButtons
-                    status={a.status}
-                    id={a.id}
-                    onAccept={onAccept}
-                    onReject={onReject}
-                  />
+            {Array.isArray(sourceData) && sourceData.length > 0 ? (
+              sourceData.map((a, idx) => (
+                <tr
+                  key={a.id}
+                  className="border-b text-xs text-center hover:bg-gray-50 last:border-b-0"
+                >
+                  <td className="px-4 py-4">{idx + 1}</td>
+                  <td className="px-4 py-4">{a.posisi}</td>
+                  <td className="px-4 py-4">{a.perusahaan}</td>
+                  <td className="px-4 py-4">{a.penempatan}</td>
+                  <td className="px-4 py-4 text-center">
+                    {a.cvUrl ? <PdfButton url={a.cvUrl} title="Lihat CV" /> : <span className="text-gray-400">—</span>}
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    {a.transkripUrl ? (
+                      <PdfButton url={a.transkripUrl} title="Lihat Transkrip" />
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-center whitespace-nowrap">
+                    <StatusChip status={a.status} />
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <ActionButtons status={a.status} id={a.id} onAccept={accept} onReject={reject} />
+                  </td>
+                </tr>
+              ))
+            ) : apiLoading ? (
+              // Skeleton loading rows
+              Array.from({ length: 3 }).map((_, idx) => (
+                <tr key={idx} className="border-b text-xs text-center last:border-b-0 animate-pulse">
+                  {colClasses.map((cls, i) => (
+                    <td key={i} className={`px-4 py-4 ${cls}`}>
+                      <div className="h-4 bg-gray-200 rounded w-full mx-auto" style={{ maxWidth: i === 0 ? 24 : i === 1 ? 80 : i === 2 ? 120 : i === 3 ? 120 : i === 4 || i === 5 ? 32 : i === 6 ? 80 : 60 }} />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={headers.length} className="px-4 py-6 text-center text-sm text-gray-600">
+                  {apiError ? `Gagal memuat lamaran: ${String(apiError)}` : "Belum melamar lowongan."}
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

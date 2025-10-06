@@ -39,6 +39,24 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Derive an API root that has no trailing /api segment so we can reliably
+// build absolute URLs for storage assets (e.g. storage/..., /storage/...).
+// Prefer NEXT_PUBLIC_API_BASE_URL, fallback to NEXT_PUBLIC_API_BASE, then a default
+const API_BASE_ENV = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000/api';
+const API_ROOT = API_BASE_ENV.replace(/\/?api\/?$/i, '').replace(/\/$/, '');
+
+function normalizeAssetUrl(raw?: string | null): string | undefined {
+  if (!raw) return undefined;
+  const s = String(raw);
+  // allow absolute URLs and data/blob through
+  if (/^data:/i.test(s) || /^blob:/i.test(s) || /^https?:\/\//i.test(s)) return s;
+  const cleaned = s.replace(/^\/+/, '');
+  // If already starts with storage/, use as-is
+  if (/^storage\//i.test(cleaned)) return API_ROOT + '/' + cleaned;
+  // Prefer storage/ variant first (most files are under storage symlink), then root path
+  return API_ROOT + '/storage/' + cleaned;
+}
+
 function extractCompanyPayload(res: any): RawCompany | undefined {
   if (!res) return undefined;
   const payload = res.data ?? res;
@@ -78,20 +96,13 @@ export async function getCompanyById(id: string | number): Promise<Company | nul
 
   let totalLowongan = aktifLowongan.length;
 
-    let logo = r.logo_url ?? r.logo_perusahaan ?? undefined;
-    if (logo && !/^https?:\/\//i.test(logo)) {
-      // Pastikan absolute URL untuk konsumsi Next Image (jika perlu)
-      const base = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000';
-      logo = base.replace(/\/$/, '') + '/' + logo.replace(/^\//,'');
-    }
+  let logo = normalizeAssetUrl(r.logo_url ?? r.logo_perusahaan ?? undefined);
 
     // Normalisasi logo perusahaan juga untuk setiap lowongan terkait agar langsung siap dipakai JobCard
-    const base = (process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000').replace(/\/$/, '');
+    // Use API_ROOT for normalization of any storage-relative paths
   let jobs: Job[] = aktifLowongan.map(l => {
-      let rawLogo = l.perusahaan?.logo_url ?? l.perusahaan?.logo_perusahaan ?? logo;
-      if (rawLogo && !/^https?:\/\//i.test(rawLogo)) {
-        rawLogo = base + '/' + rawLogo.replace(/^\//,'');
-      }
+  let rawLogo = l.perusahaan?.logo_url ?? l.perusahaan?.logo_perusahaan ?? logo;
+  rawLogo = normalizeAssetUrl(rawLogo) ?? undefined;
       return {
         id: l.id,
         judul_lowongan: l.judul_lowongan,
@@ -112,10 +123,9 @@ export async function getCompanyById(id: string | number): Promise<Company | nul
 
     if (Array.isArray(apiJobsRaw)) {
       // Gunakan data langsung dari endpoint baru
-      const base2 = (process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000').replace(/\/$/, '');
       jobs = apiJobsRaw.map((l: any) => {
-        let rawLogo = l.logo_url ?? l.logo_perusahaan ?? r.logo_perusahaan ?? logo;
-        if (rawLogo && !/^https?:\/\//i.test(rawLogo)) rawLogo = base2 + '/' + rawLogo.replace(/^\//,'');
+  let rawLogo = l.logo_url ?? l.logo_perusahaan ?? r.logo_perusahaan ?? logo;
+  rawLogo = normalizeAssetUrl(rawLogo) ?? undefined;
         return {
           id: l.id,
             judul_lowongan: l.judul_lowongan,
@@ -134,10 +144,8 @@ export async function getCompanyById(id: string | number): Promise<Company | nul
       // fallback ke mekanisme sebelumnya (allLowongan filtering)
       totalLowongan = relatedLowongan.length;
       jobs = relatedLowongan.map(l => {
-        let rawLogo = l.perusahaan?.logo_url ?? l.perusahaan?.logo_perusahaan ?? logo;
-        if (rawLogo && !/^https?:\/\//i.test(rawLogo)) {
-          rawLogo = base + '/' + rawLogo.replace(/^\//,'');
-        }
+  let rawLogo = l.perusahaan?.logo_url ?? l.perusahaan?.logo_perusahaan ?? logo;
+  rawLogo = normalizeAssetUrl(rawLogo) ?? undefined;
         return {
           id: l.id,
           judul_lowongan: l.judul_lowongan,

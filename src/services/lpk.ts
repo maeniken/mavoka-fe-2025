@@ -20,10 +20,13 @@ export async function getLpkById(id: string): Promise<Lpk | null> {
     const r = extractLpkPayload(res) as LpkRaw | undefined;
     if (!r) return null;
 
-    let logo = r.logo_url ?? r.logo_lembaga ?? null;
-    if (logo && !/^https?:\/\//i.test(logo)) {
-      const base = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000';
-      logo = base.replace(/\/$/, '') + '/' + logo.replace(/^\//,'');
+    // Simpan raw path untuk builder (jangan langsung paksa base karena logic fallback di komponen)
+    const rawLogo = r.logo_lembaga ?? r.logo_url ?? null;
+    let logo = rawLogo;
+    if (logo && /^https?:\/\//i.test(logo)) {
+      // biarkan apa adanya (absolute)
+    } else if (logo) {
+      // tidak langsung digabung base di sini; komponen akan menyusun kandidat
     }
 
     const lpk: Lpk = {
@@ -34,9 +37,11 @@ export async function getLpkById(id: string): Promise<Lpk | null> {
       email: r.email ?? "-",
       deskripsi_lembaga: r.deskripsi_lembaga ?? null,
       bidang_pelatihan: r.bidang_pelatihan ?? null,
-      logoUrl: logo,
+  logoUrl: logo, // bisa relative atau absolute
+  logoRaw: rawLogo ?? null,
       coverUrl: r.cover_url ?? null,
       slug: r.slug,
+      username: (r as any).username ?? null,
     };
 
     return lpk;
@@ -56,11 +61,15 @@ export async function getAllLpk(): Promise<Lpk[]> {
     else if (Array.isArray(payload.data)) arr = payload.data;
     else if (Array.isArray(payload.data?.data)) arr = payload.data.data; // kemungkinan paginated
 
-    const base = (process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000').replace(/\/$/, '');
+  // base disiapkan jika kita butuh normalisasi cepat utk absolute; namun kita pertahankan raw untuk builder di komponen
+  const base = (process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000').replace(/\/$/, '');
     return arr.map(item => {
-      let logo = item.logo_url || item.logo_lembaga || null;
-      if (logo && !/^https?:\/\//i.test(logo)) {
-        logo = base + '/' + String(logo).replace(/^\//,'');
+      const rawLogo = item.logo_lembaga || item.logo_url || item.logo || null;
+      let logo = rawLogo;
+      if (logo && /^https?:\/\//i.test(logo)) {
+        // absolute OK
+      } else if (logo) {
+        // tetap biarkan relative di sini; builder akan mencoba berbagai pola
       }
       const mapped: Lpk = {
         id: item.id,
@@ -68,15 +77,45 @@ export async function getAllLpk(): Promise<Lpk[]> {
         address: item.alamat ?? '-',
         bidang_pelatihan: item.bidang_pelatihan ?? null,
         logoUrl: logo,
+        logoRaw: rawLogo ?? null,
         slug: item.slug,
         web_lembaga: item.web_lembaga ?? null,
         deskripsi_lembaga: item.deskripsi_lembaga ?? null,
         email: item.email ?? undefined,
+        username: item.username ?? null,
       };
       return mapped;
     });
   } catch (e) {
     console.error('[getAllLpk] error', e);
     return [];
+  }
+}
+
+// Endpoint publik alternatif (asumsi): /api/lpk/{id}
+export async function getPublicLpkById(id: string | number): Promise<Lpk | null> {
+  try {
+    const res = await api.get(`/api/lpk/${id}`);
+    const raw = res.data?.data || res.data || res;
+    if (!raw) return null;
+    const rawLogo = raw.logo_lembaga || raw.logo_url || raw.logo || null;
+    const mapped: Lpk = {
+      id: raw.id ?? id,
+      name: raw.nama_lembaga ?? 'Lembaga Pelatihan',
+      address: raw.alamat ?? '-',
+      web_lembaga: raw.web_lembaga ?? null,
+      bidang_pelatihan: raw.bidang_pelatihan ?? null,
+      deskripsi_lembaga: raw.deskripsi_lembaga ?? null,
+      logoUrl: rawLogo,
+      logoRaw: rawLogo,
+      coverUrl: raw.cover_url ?? null,
+      slug: raw.slug,
+      email: raw.email ?? undefined,
+      username: raw.username ?? null,
+    };
+    return mapped;
+  } catch (e) {
+    console.warn('[getPublicLpkById] gagal', e);
+    return null;
   }
 }

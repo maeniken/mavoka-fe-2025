@@ -25,3 +25,15 @@ export async function getLowonganPerusahaan(): Promise<Lowongan[]> {
   // mapping supaya frontend dapat versi rapih
   return res.data.map((item: any) => mapApiLowonganToClient(item));
 }
+
+// ===== UI-only mode helpers (sementara) =====
+export async function getLowonganByIdClient(id: number): Promise<Lowongan | null> {
+  const all = await getLowonganPerusahaan();
+  return all.find((x) => Number(x.id) === Number(id)) ?? null;
+}
+
+export async function mockSubmit(_payload?: unknown, _note?: string): Promise<void> {
+  // simulasi submit sukses: delay 600ms
+  await new Promise((r) => setTimeout(r, 600));
+  // tidak ada efek ke server. Hanya untuk memicu modal dan redirect.
+}

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+// @ts-ignore: side-effect import of global CSS without a module declaration
 import "./globals.css";
+import ClientRoot from "@/app/components/ClientRoot";
+import { AuthProvider } from "@/app/components/auth/AuthProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +31,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ClientRoot>
+          <AuthProvider>{children}</AuthProvider>
+        </ClientRoot>
       </body>
     </html>
   );

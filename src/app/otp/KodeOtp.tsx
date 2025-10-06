@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/app/components/registrasi/button";
-import { verifyOtp } from "@/lib/api-otp";
+import { verifyOtp, resendOtp } from "@/lib/api-otp";
 
 export default function KodeOtp() {
   const [timeLeft, setTimeLeft] = useState(600);
@@ -15,6 +15,7 @@ export default function KodeOtp() {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
@@ -135,11 +136,40 @@ export default function KodeOtp() {
         <button
           type="button"
           className="text-[#0F67B1] font-semibold hover:underline"
-          onClick={() => alert("Kode dikirim ulang")}
+          onClick={async () => {
+            if (!email || !role) {
+              setToast({ message: "Email atau role tidak ditemukan", type: "error" });
+              return;
+            }
+            setLoading(true);
+            try {
+              const resp = await resendOtp({ email, role });
+              const msg = resp?.message || (resp?.email_status ? `Status: ${resp.email_status}` : "OTP dikirim");
+              setToast({ message: msg, type: "success" });
+            } catch (err) {
+              console.error("Resend OTP failed", err);
+              setToast({ message: "Gagal mengirim ulang OTP. Cek console atau coba lagi nanti.", type: "error" });
+            } finally {
+              setLoading(false);
+              // auto-hide
+              setTimeout(() => setToast(null), 3000);
+            }
+          }}
         >
           Kirim Ulang
         </button>
       </p>
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50">
+          <div
+            className={`px-4 py-2 rounded shadow-md text-white ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}
+          >
+            {toast.message}
+          </div>
+        </div>
+      )}
     </form>
   );
 }

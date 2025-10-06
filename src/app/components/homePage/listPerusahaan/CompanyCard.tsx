@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { HiOutlineMapPin } from "react-icons/hi2";
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { Company } from "@/types/company";
+import { buildLogoCandidates } from "@/lib/logoPath";
 
 const LOGO_H = 72;
 
@@ -20,18 +20,51 @@ export default function CompanyCard({ data }: Props) {
     );
   }, [router, data.slug, data.id]);
 
+  // Gunakan buildLogoCandidates yang sudah diperbaiki
+  const { primary: primaryLogo, candidates } = useMemo(() => 
+    buildLogoCandidates(data.logoUrl), 
+    [data.logoUrl]
+  );
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug('[CompanyCard] logo candidates', { logoUrl: data.logoUrl, candidates });
+  }
+
+  const [idx, setIdx] = useState(0);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setIdx(0); setFailed(false); }, [primaryLogo]);
+  const current = candidates[idx] || primaryLogo;
+
   return (
     <article className="rounded-[2px] border border-gray-200 bg-white shadow-[0_4px_4px_rgba(0,0,0,0.25)]  hover:shadow-[0_6px_8px_rgba(0,0,0,0.3)] transition overflow-hidden flex flex-col">
       {/* Logo tengah atas */}
       <div className="relative grid place-items-center px-4 pt-6 pb-4">
-        <div className="relative w-full" style={{ height: LOGO_H }}>
-          <Image
-            src={data.logoUrl || "/assets/img/placeholder-logo.png"} // fallback logo konsisten dengan api-perusahaan
-            alt={`${data.name} logo`}
-            fill
-            className="object-contain"
-            sizes="(min-width:1024px) 30vw, (min-width:744px) 45vw, 90vw"
-          />
+        <div className="relative w-full flex items-center justify-center" style={{ height: LOGO_H }}>
+          {current && !failed ? (
+            <img
+              src={current}
+              alt={`${data.name} logo`}
+              className="object-contain max-h-full w-auto"
+              loading="lazy"
+              onError={() => {
+                if (idx + 1 < candidates.length) {
+                  setIdx(idx + 1);
+                } else {
+                  setFailed(true);
+                  if (process.env.NODE_ENV !== 'production') {
+                    console.debug('[CompanyCard] gagal memuat semua kandidat logo', { logoUrl: data.logoUrl, candidates });
+                  }
+                }
+              }}
+            />
+          ) : (
+            <img
+              src="/assets/img/placeholder-logo.png"
+              alt="placeholder"
+              className="object-contain max-h-full w-auto opacity-70"
+              loading="lazy"
+            />
+          )}
         </div>
       </div>
 

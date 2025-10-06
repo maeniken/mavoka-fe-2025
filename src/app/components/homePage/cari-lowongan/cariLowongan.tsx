@@ -37,6 +37,15 @@ export default function CariLowonganResult() {
     const fetchJobs = async () => {
       try {
   const rawData = await TampilAllLowongan(); // sudah dijamin array oleh helper
+        
+        // Debug: Log raw data untuk melihat struktur
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[CariLowonganResult] Raw data from API:', rawData);
+          if (rawData?.length > 0) {
+            console.debug('[CariLowonganResult] Sample job data:', rawData[0]);
+            console.debug('[CariLowonganResult] Sample perusahaan data:', rawData[0]?.perusahaan);
+          }
+        }
 
         const posisi = searchParams.get("posisi")?.toLowerCase() || "";
         const perusahaan = searchParams.get("perusahaan")?.toLowerCase() || "";
@@ -67,6 +76,19 @@ export default function CariLowonganResult() {
           });
 
         setJobs(filtered);
+        
+        // Debug: Log filtered jobs untuk melihat logo yang akan diteruskan
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[CariLowonganResult] Filtered jobs:', filtered);
+          filtered.forEach((job: any, index: number) => {
+            const logoValue = job.perusahaan.logo_url || job.perusahaan.logo_perusahaan;
+            console.debug(`[CariLowonganResult] Job ${index} - ${job.perusahaan.nama_perusahaan}:`, {
+              logo_url: job.perusahaan.logo_url,
+              logo_perusahaan: job.perusahaan.logo_perusahaan,
+              finalLogo: logoValue
+            });
+          });
+        }
       } catch (err) {
         console.error("Gagal fetch lowongan:", err);
       } finally {
@@ -106,25 +128,30 @@ export default function CariLowonganResult() {
       ) : (
         <>
           <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
-            {currentJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                id={job.id}
-                companyLogo={job.perusahaan.logo_url || job.perusahaan.logo_perusahaan}
-                title={job.judul_lowongan}
-                company={job.perusahaan.nama_perusahaan}
-                location={job.lokasi_penempatan}
-                positions={job.kuota}
-                closingDate={new Date(job.deadline_lamaran).toLocaleDateString(
-                  "id-ID",
-                  {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  }
-                )}
-              />
-            ))}
+            {currentJobs.map((job) => {
+              // Prioritaskan logo_perusahaan (relative path) karena logo_url dari backend tidak selalu benar
+              const logoPath = job.perusahaan.logo_perusahaan || job.perusahaan.logo_url || null;
+              
+              return (
+                <JobCard
+                  key={job.id}
+                  id={job.id}
+                  companyLogo={logoPath}
+                  title={job.judul_lowongan}
+                  company={job.perusahaan.nama_perusahaan}
+                  location={job.lokasi_penempatan}
+                  positions={job.kuota}
+                  closingDate={new Date(job.deadline_lamaran).toLocaleDateString(
+                    "id-ID",
+                    {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    }
+                  )}
+                />
+              );
+            })}
           </div>
 
           <Pagination

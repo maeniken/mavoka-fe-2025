@@ -49,12 +49,6 @@ export default function PelatihanFormView({
   const addCapaian = () =>
     setValues((v) => ({ ...v, capaian: [...v.capaian, ""] }));
 
-  const removeCapaian = (i: number) =>
-    setValues((v) => ({
-      ...v,
-      capaian: v.capaian.filter((_, idx) => idx !== i),
-    }));
-
   const canSubmit =
     values.namaPelatihan.trim() &&
     values.deskripsi.trim() &&
@@ -75,7 +69,7 @@ export default function PelatihanFormView({
       "w-full rounded-lg border border-gray-300 text-[#858585] p-4",
       readOnly ? "bg-gray-100 text-[#858585]" : "",
       !readOnly &&
-        "focus:outline-none focus:ring-2 focus:ring-[#0F67B1]/30 focus:border-[#0F67B1]",
+        "focus:outline-none focus:ring-2 focus:ring-[#0F67B1] focus:border-[#0F67B1]",
       extra,
     ]
       .filter(Boolean)
@@ -83,14 +77,19 @@ export default function PelatihanFormView({
 
   return (
     <div className="space-y-4">
-      <button
-        onClick={() => router.back()}
-        className="inline-flex items-center gap-2 text-black hover:opacity-80 shadow-none"
-      >
-        <FiArrowLeft /> <span className="text-xl font-semibold">Kembali</span>
-      </button>
+      <div className="mb-2">
+        <button
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 text-black hover:opacity-80 shadow-none mb-0"
+        >
+          <FiArrowLeft className="-ml-4" />
+          <span className="text-xl font-semibold leading-none">Kembali</span>
+        </button>
 
-      <h3 className="font-semibold">{title || defaultTitle}</h3>
+        <h3 className="font-semibold leading-tight mt-3">
+          {title || defaultTitle}
+        </h3>
+      </div>
 
       <div className="rounded-xl bg-white p-5 md:p-6 shadow-sm ">
         <div className="mb-4">
@@ -145,6 +144,7 @@ export default function PelatihanFormView({
             />
           </div>
 
+          {/* Capaian Pembelajaran */}
           <div>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
               <label className="block text-sm font-semibold">
@@ -157,7 +157,7 @@ export default function PelatihanFormView({
                   className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                 >
                   <span className="text-base leading-none">+</span>
-                  <span>Tambah Capaian Pembelajaran</span>
+                  <span>Capaian Pembelajaran</span>
                 </button>
               )}
             </div>
@@ -173,16 +173,6 @@ export default function PelatihanFormView({
                     placeholder="Masukkan capaian..."
                     className={fieldCls()}
                   />
-                  {!readOnly && values.capaian.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeCapaian(i)}
-                      className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-                      title="Hapus baris"
-                    >
-                      Hapus
-                    </button>
-                  )}
                 </div>
               ))}
             </div>

@@ -1,28 +1,39 @@
 "use client";
 
 import Image from "next/image";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
 interface Props {
   name: string;
-  logo?: string | null; // bisa null
+  logo?: string | null; // kandidat pertama
+  _logoCandidates?: string[]; // internal extended prop
   bgImage?: string;
-  subtitle?: string; 
+  subtitle?: string;
 }
 
 export default function DetailHeader({
   name,
   logo,
+  _logoCandidates,
   bgImage = "/img/GAMBAR-PERUSAHAAN.png",
   subtitle,
 }: Props) {
-  // Normalisasi logo: jika relatif (tidak mulai http), gabungkan dengan BASE_URL
-  const normalizedLogo = useMemo(() => {
-    if (!logo) return "/img/sejarah-mavoka.png";
-    if (/^https?:\/\//i.test(logo)) return logo; // already absolute
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "";
-    return `${base}/${logo.replace(/^\//,'')}`;
-  }, [logo]);
+  const candidates = useMemo(() => {
+    const arr = _logoCandidates && _logoCandidates.length ? _logoCandidates : (logo ? [logo] : []);
+    return arr;
+  }, [_logoCandidates, logo]);
+
+  const [idx, setIdx] = useState(0);
+  const [allFailed, setAllFailed] = useState(false);
+
+  const activeLogo = useMemo(() => {
+    if (allFailed || !candidates.length) return null;
+    let current = candidates[idx];
+    if (!current) return null;
+    if (/^https?:\/\//i.test(current)) return current;
+    const base = (process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+    return `${base}/${current.replace(/^\//,'')}`;
+  }, [candidates, idx, allFailed]);
 
   return (
     <header className="relative rounded-2xl overflow-hidden border bg-white">
@@ -38,13 +49,32 @@ export default function DetailHeader({
 
       <div className="relative bg-white flex flex-col items-center p-6">
         <div className="-mt-14 mb-4 w-[90px] h-[90px] rounded-md bg-white shadow flex items-center justify-center overflow-hidden">
-          <Image
-            src={normalizedLogo}
-            alt={name}
-            width={80}
-            height={80}
-            className="object-contain rounded"
-          />
+          {activeLogo ? (
+            <Image
+              key={activeLogo}
+              src={activeLogo}
+              alt={name}
+              width={80}
+              height={80}
+              className="object-contain rounded"
+              onError={() => {
+                setIdx(i => {
+                  const next = i + 1;
+                  if (next >= candidates.length) {
+                    setAllFailed(true);
+                    console.warn('[DetailHeader] semua kandidat logo gagal', candidates);
+                    return i;
+                  }
+                  console.debug('[DetailHeader] gagal load, coba kandidat berikut', candidates[next]);
+                  return next;
+                });
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+              NO LOGO
+            </div>
+          )}
         </div>
         <h1 className="text-xl font-bold text-[#0F67B1] text-center">
           {name || "-"}

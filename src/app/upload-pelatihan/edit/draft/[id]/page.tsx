@@ -2,84 +2,55 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import PelatihanFormView from "@/app/components/upload-lowongan-pelatihan/PelatihanFormView";
-import { PelatihanFormValues, Pelatihan } from "@/types/pelatihan";
-import { getPelatihanSaya, updatePelatihan } from "@/lib/api-pelatihan";
+import LowonganFormView from "@/app/components/upload-lowongan-pelatihan/LowonganFormView";
+import type { Lowongan, CreateLowonganPayload } from "@/types/lowongan";
+import { getLowonganByIdClient /*, saveDraftApi, unggahApi */ } from "@/lib/api-lowongan";
 
-function toFormValues(p: Pelatihan): PelatihanFormValues {
-  // capaian di tabel berbentuk "A; B; C" → pecah ke array
-  const list =
-    p.capaianList ??
-    (p.capaian
-      ? p.capaian
-          .split(/[;\n]/g)
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : []);
-  return {
-    namaPelatihan: p.namaPelatihan,
-    deskripsi: p.deskripsi,
-    kategori: p.kategori,
-    capaian: list.length ? list : [""],
-  };
-}
-
-export default function EditDraftPelatihanPage() {
+export default function PageEditDraft() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [item, setItem] = useState<Pelatihan | null>(null);
+  const numericId = useMemo(() => Number(id), [id]);
+  const [initial, setInitial] = useState<Partial<Lowongan> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
     (async () => {
-      try {
-        setLoading(true);
-        const all = await getPelatihanSaya();
-        const row = all.find((r) => r.id === Number(id));
-        if (!row) {
-          setErr("Data tidak ditemukan.");
-        } else {
-          setItem(row);
-        }
-      } catch (e: any) {
-        setErr(e?.response?.data?.message || "Gagal memuat data");
-      } finally {
-        setLoading(false);
-      }
+      console.log("[EditDraft] fetch id =", numericId);
+      const data = await getLowonganByIdClient(numericId);
+      if (!mounted) return;
+      setInitial(data ?? null);
+      setLoading(false);
     })();
-  }, [id]);
-
-  const initial = useMemo(() => (item ? toFormValues(item) : undefined), [item]);
+    return () => {
+      mounted = false;
+    };
+  }, [numericId]);
 
   if (loading) return <div className="p-6">Memuat…</div>;
-  if (err) return <div className="p-6 text-red-600">{err}</div>;
-  if (!item || !initial) return <div className="p-6">Data tidak ditemukan.</div>;
+  if (!initial) return <div className="p-6 text-red-600">Data tidak ditemukan.</div>;
 
   return (
     <div className="p-6">
-      <PelatihanFormView
-        mode="editDraft"
-        title="Ubah Draft Pelatihan"
+      <LowonganFormView
+        key={`edit-draft-${numericId}`} // paksa re-mount saat pindah id
+        mode="edit-draft"
         initial={initial}
-        onSaveDraft={async (v: PelatihanFormValues) => {
-          try {
-            await updatePelatihan(Number(id), v, { publish: false });
-            alert("Draft berhasil diperbarui.");
-            router.replace("/upload-pelatihan?tab=draft");
-          } catch (e: any) {
-            alert(e?.response?.data?.message || "Gagal memperbarui draft");
-          }
+        onSaveDraft={async (payload: CreateLowonganPayload, lowonganId?: number) => {
+          console.log("[EditDraft] Simpan Draft", { lowonganId, payload });
+          // await saveDraftApi(lowonganId!, payload);
         }}
-        onPublish={async (v: PelatihanFormValues) => {
-          try {
-            await updatePelatihan(Number(id), v, { publish: true });
-            alert("Pelatihan berhasil diunggah.");
-            router.replace("/upload-pelatihan?tab=terpasang");
-          } catch (e: any) {
-            alert(e?.response?.data?.message || "Gagal mengunggah pelatihan");
-          }
+        onUnggah={async (payload: CreateLowonganPayload, lowonganId?: number) => {
+          console.log("[EditDraft] Unggah dari Draft", { lowonganId, payload });
+          // await unggahApi(lowonganId!, payload);
+          // router.replace("/upload-lowongan?tab=terpasang");
+        }}
+        successFor={["draft", "unggah"]}
+        successMessage="Perubahan berhasil diproses."
+        onSuccessClose={(action) => {
+          if (action === "draft") router.replace("/upload-lowongan?tab=draft");
+          if (action === "unggah") router.replace("/upload-lowongan?tab=terpasang");
         }}
       />
     </div>
