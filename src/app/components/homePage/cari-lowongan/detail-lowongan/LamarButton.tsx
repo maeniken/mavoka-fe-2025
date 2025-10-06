@@ -17,6 +17,34 @@ export default function LamarButton() {
   const [openSuccess, setOpenSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Hitung jumlah lamaran aktif (lamar, wawancara, penawaran) milik siswa login
+  // Hitung jumlah total unik lowongan yang pernah dilamar oleh siswa
+  async function getTotalUniqueLamaranCount(): Promise<number> {
+    try {
+      let headers: Record<string, string> | undefined = undefined;
+      try {
+        headers = requireRoleAuthHeader("siswa");
+      } catch {}
+      const res = await fetch(`${BASE_URL}/pelamar`, {
+        method: "GET",
+        headers,
+        credentials: headers ? "omit" : "include",
+        cache: "no-store",
+      });
+      if (!res.ok) return 0; // kalau gagal, jangan blokir sisi FE; BE tetap validasi
+      const json: any = await res.json().catch(() => null);
+      const arr: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+        const uniq = new Set<string>();
+        for (const it of arr) {
+          const lowonganId = String(it?.lowongan_id ?? it?.lowongan?.id ?? '');
+          if (lowonganId) uniq.add(lowonganId);
+        }
+        return uniq.size;
+    } catch {
+      return 0;
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lowonganId) {
@@ -25,6 +53,13 @@ export default function LamarButton() {
     }
     if (!cvFile || !transkripFile) {
       alert("Mohon unggah CV dan Transkrip terlebih dahulu.");
+      return;
+    }
+
+    // Pre-check batas 5 total unique lowongan yang pernah dilamar
+    const uniqCount = await getTotalUniqueLamaranCount();
+    if (uniqCount >= 5) {
+      alert("Maksimal 5 lowongan yang dapat Anda lamar.");
       return;
     }
 
@@ -51,10 +86,9 @@ export default function LamarButton() {
         credentials: headers ? "omit" : "include",
       });
 
-      // Attempt to read response body as text first
-      const text = await res.text().catch(() => "");
+      // Baca JSON bila memungkinkan, tanpa menampilkan raw body ke pengguna
       let json: any = null;
-      try { json = text ? JSON.parse(text) : null; } catch { json = null; }
+      try { json = await res.clone().json(); } catch {}
 
       if (res.ok) {
         setOpen(false);
@@ -62,12 +96,24 @@ export default function LamarButton() {
         setCvFile(null);
         setTranskripFile(null);
       } else {
-        // Build a helpful message
-        const statusPart = `HTTP ${res.status} ${res.statusText}`;
-        const serverMsg = json?.message || json?.error || json?.errors || (text || null);
-        const message = serverMsg ? `${statusPart}: ${typeof serverMsg === 'string' ? serverMsg : JSON.stringify(serverMsg)}` : statusPart;
-        console.error("lamar error:", json ?? text ?? res.statusText);
-        alert(message || "Gagal mengirim lamaran.");
+        // Pesan yang ramah pengguna
+        let message = "Gagal mengirim lamaran.";
+        const apiMsg = json?.message || json?.error || null;
+        if (res.status === 401) message = "Sesi Anda berakhir. Silakan login sebagai Siswa.";
+        else if (res.status === 403) message = "Anda tidak berhak melakukan aksi ini.";
+        else if (res.status === 409) {
+          // Backend sudah membatasi maksimal 5 lamaran aktif
+          message = apiMsg || "Maksimal 5 lamaran aktif diperbolehkan.";
+        } else if (res.status === 422 && json?.errors) {
+          const firstField = Object.keys(json.errors)[0];
+          const errVal = json.errors[firstField];
+          const firstMsg = Array.isArray(errVal) ? errVal[0] : String(errVal);
+          message = firstMsg || apiMsg || message;
+        } else if (apiMsg) {
+          message = apiMsg;
+        }
+        console.error("lamar error:", res.status, json ?? res.statusText);
+        alert(message);
       }
     } catch (err) {
       console.error(err);

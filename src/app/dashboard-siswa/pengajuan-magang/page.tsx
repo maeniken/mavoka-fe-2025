@@ -1,17 +1,23 @@
 'use client';
 import StudentApplicationsTable from "@/app/components/dashboard/siswa/pengajuan-magang/table";
 import React, { useEffect, useMemo, useState } from "react";
+import SuccessModal from "@/app/components/registrasi/PopupBerhasil";
 import { useApplicants } from "@/lib/mock-pelamar";
 import useMyApplications from "@/lib/useMyApplications";
 
 export default function PengajuanMagangPage() {
-  const { loading, items, onAccept, onReject } = useApplicants();
+  // Pakai hook applicants dalam mode mock agar tidak memanggil endpoint perusahaan di halaman siswa
+  const { loading, items } = useApplicants({ mode: 'mock' });
   const USE_API = process.env.NEXT_PUBLIC_USE_API === "true";
+  const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
   // Hanya pakai hook API di page jika kita butuh debug info; tabel akan fetch sendiri kalau data tidak diberikan.
-  const { status: apiStatus, error: apiError, data: apiItems, loading: apiLoading, usedToken } = useMyApplications();
+  const { status: apiStatus, error: apiError, data: apiItems, loading: apiLoading, usedToken, refetch } = useMyApplications();
 
   // read current logged-in siswa info from localStorage (reactively)
   const [currentUser, setCurrentUser] = useState<Record<string, any> | null>(null);
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastTitle, setToastTitle] = useState("Berhasil");
+  const [toastMsg, setToastMsg] = useState("");
   useEffect(() => {
     try {
       const raw = localStorage.getItem("user");
@@ -59,6 +65,78 @@ export default function PengajuanMagangPage() {
     status: (a.status as any) || a.status_lamaran || "lamar",
   });
 
+  // === Student actions: respond penawaran ===
+  async function getSiswaToken(): Promise<string | null> {
+    if (typeof window === "undefined") return null;
+    let token =
+      localStorage.getItem("access_token_siswa") ||
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("accessToken") ||
+      localStorage.getItem("token") ||
+      localStorage.getItem("auth_token");
+    if (!token) {
+      try {
+        const raw = localStorage.getItem("user");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          token = parsed?.access_token || parsed?.token || parsed?.accessToken || parsed?.auth_token || null;
+        }
+      } catch {}
+    }
+    return token;
+  }
+
+  async function respondPenawaran(id: string, aksi: "terima" | "tolak") {
+    const token = await getSiswaToken();
+    const headers: Record<string, string> = { Accept: "application/json", "Content-Type": "application/json" };
+    const opts: RequestInit = {
+      method: "POST",
+      headers: token ? { ...headers, Authorization: `Bearer ${token}` } : headers,
+      credentials: token ? "omit" : "include",
+      body: JSON.stringify({ aksi }),
+    };
+    const res = await fetch(`${BASE}/pelamar/${id}/respond-penawaran`, opts);
+    if (!res.ok) {
+      let userMsg = aksi === "terima" ? "Gagal menerima penawaran." : "Gagal menolak penawaran.";
+      try {
+        const ct = res.headers.get('Content-Type') || '';
+        if (ct.includes('application/json')) {
+          const body = await res.clone().json().catch(() => null);
+          const apiMsg = body?.message || body?.error || null;
+          if (apiMsg) userMsg = apiMsg;
+        }
+      } catch {}
+      if (res.status === 401) userMsg = "Sesi Anda berakhir. Silakan login kembali.";
+      if (res.status === 403) userMsg = "Anda tidak berhak melakukan aksi ini.";
+      if (res.status === 409 && !/diterima|ditolak/i.test(userMsg)) userMsg = "Status lamaran sudah berubah. Silakan muat ulang.";
+      throw new Error(userMsg);
+    }
+    // refresh siswa applications
+    try { await refetch(); } catch {}
+    setToastTitle("Berhasil");
+    setToastMsg(aksi === "terima" ? "Penawaran berhasil diterima." : "Penawaran berhasil ditolak.");
+    setToastOpen(true);
+  }
+
+  const handleAccept = async (id: string) => {
+    try {
+      await respondPenawaran(id, "terima");
+    } catch (e: any) {
+      setToastTitle("Gagal");
+      setToastMsg(e?.message || String(e));
+      setToastOpen(true);
+    }
+  };
+  const handleReject = async (id: string) => {
+    try {
+      await respondPenawaran(id, "tolak");
+    } catch (e: any) {
+      setToastTitle("Gagal");
+      setToastMsg(e?.message || String(e));
+      setToastOpen(true);
+    }
+  };
+
   return (
     <div className="p-4">
       <h3 className="mb-4">Lowongan Dilamar</h3>
@@ -77,13 +155,21 @@ export default function PengajuanMagangPage() {
       )}
       {USE_API ? (
         // Mode API: biarkan tabel melakukan fetch internal dan menampilkan skeleton & empty state sendiri
-        <StudentApplicationsTable onAccept={onAccept} onReject={onReject} />
+        <StudentApplicationsTable onAccept={handleAccept} onReject={handleReject} />
       ) : !currentUser ? (
         <div>Silakan login untuk melihat lamaran Anda.</div>
       ) : (
         // Mode mock: kirim data yang sudah difilter agar tabel tidak fetch API
-        <StudentApplicationsTable data={filtered.map(mapApplicant)} onAccept={onAccept} onReject={onReject} />
+        <StudentApplicationsTable data={filtered.map(mapApplicant)} onAccept={handleAccept} onReject={handleReject} />
       )}
+
+      <SuccessModal
+        open={toastOpen}
+        title={toastTitle}
+        message={toastMsg}
+        onClose={() => setToastOpen(false)}
+        duration={1800}
+      />
     </div>
   );
 }

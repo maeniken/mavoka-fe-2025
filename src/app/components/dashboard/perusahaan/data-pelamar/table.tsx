@@ -137,7 +137,6 @@
 //  );
 //}
 
-
 //function StatusChip({ status }: { status: ApplicantStatus }) {
 //  const map: Record<ApplicantStatus, string> = {
 //    lamar: "bg-gray-100 text-gray-700",
@@ -210,7 +209,6 @@
 //  </button>
 //);
 
-
 //  if (s === "lamar") {
 //    return (
 //      <div className="flex justify-center gap-2 whitespace-nowrap">
@@ -245,14 +243,23 @@ type Props = {
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
   buildDetailHref?: (id: string) => string;
+  offerLoadingId?: string | null;
 };
 
-export default function Table({ data, onInterviewClick, onAccept, onReject }: Props) {
+export default function Table({
+  data,
+  onInterviewClick,
+  onAccept,
+  onReject,
+  offerLoadingId,
+}: Props) {
   const router = useRouter();
 
   // ==== Tambahan state untuk modal ====
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
+  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(
+    null
+  );
 
   const headers = [
     "NO",
@@ -269,14 +276,14 @@ export default function Table({ data, onInterviewClick, onAccept, onReject }: Pr
   ];
 
   const colClasses = [
-    "w-12",           // NO
-    "w-56",           // NAMA
-    "w-56",           // POSISI
-    "w-52",           // ASAL SEKOLAH
-    "w-60",           // JURUSAN
-    "w-64",           // EMAIL
-    "w-16",           // CV
-    "w-28",           // TRANSKRIP
+    "w-12", // NO
+    "w-56", // NAMA
+    "w-56", // POSISI
+    "w-52", // ASAL SEKOLAH
+    "w-60", // JURUSAN
+    "w-64", // EMAIL
+    "w-16", // CV
+    "w-28", // TRANSKRIP
     "w-28 whitespace-nowrap", // DETAIL
     "w-36 whitespace-nowrap", // STATUS
     "w-[210px] whitespace-nowrap", // AKSI
@@ -290,9 +297,11 @@ export default function Table({ data, onInterviewClick, onAccept, onReject }: Pr
             {headers.map((h, i) => (
               <th
                 key={h}
-                className={`bg-[#0F67B1] px-4 py-3 text-xs font-bold ${colClasses[i]} ${
-                  i === 0 ? "rounded-tl-[5px]" : ""
-                } ${i === headers.length - 1 ? "rounded-tr-[5px]" : ""}`}
+                className={`bg-[#0F67B1] px-4 py-2 text-xs font-bold ${
+                  colClasses[i]
+                } ${i === 0 ? "rounded-tl-[5px]" : ""} ${
+                  i === headers.length - 1 ? "rounded-tr-[5px]" : ""
+                }`}
               >
                 {h}
               </th>
@@ -302,17 +311,24 @@ export default function Table({ data, onInterviewClick, onAccept, onReject }: Pr
 
         <tbody>
           {data.map((a, idx) => (
-            <tr key={a.id} className="border-b text-xs text-center hover:bg-gray-50 last:border-b-0">
+            <tr
+              key={a.id}
+              className="border-b text-xs text-center hover:bg-gray-50 last:border-b-0"
+            >
               <td className="px-4 py-4 text-center text-gray-700">{idx + 1}</td>
-              <td className="px-4 py-4 capitalize">{a.nama}</td>
-              <td className="px-4 py-4 capitalize">{a.posisi}</td>
-              <td className="px-4 py-4">{a.asalSekolah}</td>
-              <td className="px-4 py-4">{a.jurusan}</td>
-              <td className="px-4 py-4 break-words">{a.email}</td>
+              <td className="px-4 py-4 capitalize">{a.nama || "-"}</td>
+              <td className="px-4 py-4 capitalize">{a.posisi || "-"}</td>
+              <td className="px-4 py-4">{a.asalSekolah || "-"}</td>
+              <td className="px-4 py-4">{a.jurusan || "-"}</td>
+              <td className="px-4 py-4 break-words">{a.email || "-"}</td>
 
               {/* CV */}
               <td className="px-4 py-4 text-center">
-                {a.cvUrl ? <PdfButton title="Lihat CV" url={a.cvUrl} /> : <span className="text-gray-400">—</span>}
+                {a.cvUrl ? (
+                  <PdfButton title="Lihat CV" url={a.cvUrl} />
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
               </td>
 
               {/* Transkrip */}
@@ -347,6 +363,7 @@ export default function Table({ data, onInterviewClick, onAccept, onReject }: Pr
                   onInterviewClick={onInterviewClick}
                   onAccept={onAccept}
                   onReject={onReject}
+                  offerLoadingId={offerLoadingId}
                 />
               </td>
             </tr>
@@ -355,32 +372,37 @@ export default function Table({ data, onInterviewClick, onAccept, onReject }: Pr
       </table>
 
       {/* === Modal Detail === */}
-<DetailPelamarModal
-  isOpen={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
-  data={
-    selectedApplicant
-      ? {
-          foto: selectedApplicant.fotoUrl,
-          nama: selectedApplicant.nama,
-          asalSekolah: selectedApplicant.asalSekolah,
-          jurusan: selectedApplicant.jurusan,
-          nisn: selectedApplicant.nisn ?? "",   // fallback string kosong
-          email: selectedApplicant.email,
-          noHp: selectedApplicant.noHp ?? "",   // fallback
-          alamat: selectedApplicant.alamat ?? "", // fallback
+      <DetailPelamarModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        data={
+          selectedApplicant
+            ? {
+                foto: selectedApplicant.fotoUrl,
+                nama: selectedApplicant.nama,
+                asalSekolah: selectedApplicant.asalSekolah,
+                jurusan: selectedApplicant.jurusan,
+                nisn: selectedApplicant.nisn ?? "", // fallback string kosong
+                email: selectedApplicant.email || "",
+                noHp: selectedApplicant.noHp || "",
+                alamat: selectedApplicant.alamat || "",
+              }
+            : null
         }
-      : null
-  }
-/>
-
+      />
     </div>
   );
 }
 
 /* ===== Sub-komponen ===== */
 
-function PillButton({ label, onClick }: { label: string; onClick?: () => void }) {
+function PillButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick?: () => void;
+}) {
   return (
     <button
       className="inline-flex h-9 w-24 items-center justify-center whitespace-nowrap rounded-[25px]
@@ -397,23 +419,33 @@ function StatusChip({ status }: { status: ApplicantStatus }) {
   const map: Record<ApplicantStatus, string> = {
     lamar: "bg-gray-100 text-gray-700",
     wawancara: "bg-yellow-100 text-yellow-800",
+    penawaran: "bg-[#FFF4E5] text-[#B45309]",
     diterima: "bg-green-100 text-green-700",
     ditolak: "bg-red-100 text-red-700",
   };
   const label: Record<ApplicantStatus, string> = {
     lamar: "Lamar",
     wawancara: "Wawancara",
+    penawaran: "Penawaran",
     diterima: "Diterima",
     ditolak: "Ditolak",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${map[status]}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${map[status]}`}
+    >
       ● {label[status]}
     </span>
   );
 }
 
-function PdfButton({ url, title = "Buka PDF" }: { url?: string; title?: string }) {
+function PdfButton({
+  url,
+  title = "Buka PDF",
+}: {
+  url?: string;
+  title?: string;
+}) {
   if (!url) return <span className="text-gray-400">—</span>;
 
   return (
@@ -435,22 +467,27 @@ function ActionButtons({
   onInterviewClick,
   onAccept,
   onReject,
+  offerLoadingId,
 }: {
   applicant: Applicant;
   onInterviewClick: (a: Applicant) => void;
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
+  offerLoadingId?: string | null;
 }) {
   const s = applicant.status;
+  const isOfferLoading = s === "wawancara" && offerLoadingId === applicant.id;
 
   const Btn = ({
     children,
     color,
     onClick,
+    disabled,
   }: {
     children: React.ReactNode;
     color: "green" | "red" | "orange";
     onClick: () => void;
+    disabled?: boolean;
   }) => {
     const colorMap = {
       green: "bg-green-600 hover:brightness-110",
@@ -460,9 +497,15 @@ function ActionButtons({
 
     return (
       <button
-        className={`inline-flex h-9 w-24 items-center justify-center whitespace-nowrap
-                    rounded-md text-xs font-semibold leading-none text-white ${colorMap[color]}`}
-        onClick={onClick}
+        className={`inline-flex h-9 w-24 items-center justify-center gap-2 whitespace-nowrap
+                    rounded-md text-xs font-semibold leading-none text-white ${colorMap[color]}
+                    disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:brightness-100`}
+        onClick={() => {
+          if (disabled) return;
+          onClick();
+        }}
+        disabled={disabled}
+        aria-busy={disabled ? true : undefined}
       >
         {children}
       </button>
@@ -475,15 +518,60 @@ function ActionButtons({
         <Btn color="orange" onClick={() => onInterviewClick(applicant)}>
           Wawancara
         </Btn>
-        <Btn color="red" onClick={() => onReject(applicant.id)}>Tolak</Btn>
+        <Btn color="red" onClick={() => onReject(applicant.id)}>
+          Tolak
+        </Btn>
       </div>
     );
   }
   if (s === "wawancara") {
     return (
       <div className="flex justify-center gap-2 whitespace-nowrap">
-        <Btn color="green" onClick={() => onAccept(applicant.id)}>Terima</Btn>
-        <Btn color="red" onClick={() => onReject(applicant.id)}>Tolak</Btn>
+        <Btn color="green" onClick={() => onAccept(applicant.id)} disabled={isOfferLoading}>
+          {isOfferLoading && (
+            <svg
+              className="h-5 w-5 shrink-0 animate-spin text-white"
+              viewBox="0 0 24 24"
+              role="status"
+              aria-label="Memproses"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              />
+              <circle
+                className="opacity-100"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeDasharray="80 100"
+                strokeDashoffset="60"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </svg>
+          )}
+          {isOfferLoading ? "Proses..." : "Penawaran"}
+        </Btn>
+        <Btn color="red" onClick={() => onReject(applicant.id)} disabled={isOfferLoading}>
+          Tolak
+        </Btn>
+      </div>
+    );
+  }
+  if (s === "penawaran") {
+    // Setelah status penawaran, perusahaan menunggu respon dari pelamar (siswa).
+    // Tidak ada aksi dari sisi perusahaan.
+    return (
+      <div className="flex items-center justify-center whitespace-nowrap text-xs text-gray-400">
+        Menunggu respon pelamar
       </div>
     );
   }

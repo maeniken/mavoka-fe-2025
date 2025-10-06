@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { BiSolidFilePdf } from "react-icons/bi";
 import useMyApplications from "@/lib/useMyApplications";
 
@@ -34,6 +34,7 @@ export default function StudentApplicationsTable({ data, onAccept, onReject }: P
   const noop = () => {};
   const accept = onAccept ?? noop;
   const reject = onReject ?? noop;
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   // if parent didn't provide `data`, fetch from API
   const { loading: apiLoading, error: apiError, data: apiItems } = useMyApplications();
@@ -139,6 +140,7 @@ export default function StudentApplicationsTable({ data, onAccept, onReject }: P
   ];
 
   // Note: Selalu render tabel. Saat loading (sourceData null) tampilkan skeleton di tbody.
+  const hasAccepted = Array.isArray(sourceData) && sourceData.some((a) => a.status === "diterima");
 
   return (
     <div className="bg-white rounded-md p-4 shadow">
@@ -184,7 +186,28 @@ export default function StudentApplicationsTable({ data, onAccept, onReject }: P
                     <StatusChip status={a.status} />
                   </td>
                   <td className="px-4 py-4 text-center">
-                    <ActionButtons status={a.status} id={a.id} onAccept={accept} onReject={reject} />
+                    <ActionButtons
+                      status={a.status}
+                      id={a.id}
+                      onAccept={async (id) => {
+                        if (pendingId) return;
+                        setPendingId(id);
+                        // Optimistic UI: update status locally to 'diterima'
+                        try {
+                          await Promise.resolve(accept(id));
+                        } finally { setPendingId(null); }
+                      }}
+                      onReject={async (id) => {
+                        if (pendingId) return;
+                        setPendingId(id);
+                        // Optimistic UI: update status locally to 'ditolak'
+                        try {
+                          await Promise.resolve(reject(id));
+                        } finally { setPendingId(null); }
+                      }}
+                      pendingId={pendingId}
+                      actionsDisabled={hasAccepted}
+                    />
                   </td>
                 </tr>
               ))
@@ -257,20 +280,25 @@ function ActionButtons({
   id,
   onAccept,
   onReject,
+  pendingId,
+  actionsDisabled,
 }: {
   status: ApplicationStatus;
   id: string;
-  onAccept: (id: string) => void;
-  onReject: (id: string) => void;
+  onAccept: (id: string) => void | Promise<void>;
+  onReject: (id: string) => void | Promise<void>;
+  pendingId?: string | null;
+  actionsDisabled?: boolean;
 }) {
-  if (status === "penawaran") {
+  const isPending = pendingId === id;
+  if (status === "penawaran" && !actionsDisabled) {
     return (
       <div className="flex justify-center gap-2 whitespace-nowrap">
-        <Btn color="green" onClick={() => onAccept(id)}>
-          Terima
+        <Btn color="green" onClick={() => onAccept(id)} disabled={isPending} loading={isPending}>
+          {isPending ? "Memproses..." : "Terima"}
         </Btn>
-        <Btn color="red" onClick={() => onReject(id)}>
-          Tolak
+        <Btn color="red" onClick={() => onReject(id)} disabled={isPending}>
+          {"Tolak"}
         </Btn>
       </div>
     );
@@ -282,10 +310,14 @@ function Btn({
   children,
   color,
   onClick,
+  disabled,
+  loading,
 }: {
   children: React.ReactNode;
   color: "green" | "red";
   onClick: () => void;
+  disabled?: boolean;
+  loading?: boolean;
 }) {
   const colorMap = {
     green: "bg-green-600 hover:brightness-110",
@@ -293,9 +325,40 @@ function Btn({
   };
   return (
     <button
-      className={`inline-flex h-9 w-24 items-center justify-center rounded-md text-xs font-semibold text-white ${colorMap[color]}`}
-      onClick={onClick}
+      className={`inline-flex h-9 w-28 items-center justify-center gap-2 rounded-md text-xs font-semibold text-white ${colorMap[color]} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+      onClick={() => { if (disabled) return; onClick(); }}
+      disabled={disabled}
     >
+      {loading && (
+        <svg
+          className="h-5 w-5 shrink-0 animate-spin text-white"
+          viewBox="0 0 24 24"
+          role="status"
+          aria-label="Memproses"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+            fill="none"
+          />
+          <circle
+            className="opacity-100"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+            strokeDasharray="80 100"
+            strokeDashoffset="60"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </svg>
+      )}
       {children}
     </button>
   );
