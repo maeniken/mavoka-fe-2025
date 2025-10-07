@@ -47,13 +47,31 @@ const API_ROOT = API_BASE_ENV.replace(/\/?api\/?$/i, '').replace(/\/$/, '');
 
 function normalizeAssetUrl(raw?: string | null): string | undefined {
   if (!raw) return undefined;
-  const s = String(raw);
-  // allow absolute URLs and data/blob through
-  if (/^data:/i.test(s) || /^blob:/i.test(s) || /^https?:\/\//i.test(s)) return s;
-  const cleaned = s.replace(/^\/+/, '');
-  // If already starts with storage/, use as-is
-  if (/^storage\//i.test(cleaned)) return API_ROOT + '/' + cleaned;
-  // Prefer storage/ variant first (most files are under storage symlink), then root path
+  const s = String(raw).trim();
+  // Allow absolute URLs and data/blob through as-is
+  if (/^(data:|blob:|https?:\/\/)/i.test(s)) return s;
+
+  // Normalize slashes and remove leading '/'
+  const cleaned = s.replace(/\\+/g, '/').replace(/^\/+/, '');
+
+  // Public assets served under /logos/... should NOT be prefixed with /storage
+  if (/^logos\//i.test(cleaned)) {
+    return API_ROOT + '/' + cleaned; // -> <origin>/logos/...
+  }
+
+  // New pattern used when company edits logo: perusahaan/logo/<filename>
+  // These are typically stored under the storage symlink
+  if (/^(perusahaan|sekolah|lpk)\/logo\//i.test(cleaned)) {
+    return API_ROOT + '/storage/' + cleaned; // -> <origin>/storage/perusahaan/logo/...
+  }
+
+  // Already a storage path (with or without leading slash)
+  if (/^\/?storage\//i.test(s)) {
+    const path = s.replace(/^\/+/, '');
+    return API_ROOT + '/' + path; // -> <origin>/storage/...
+  }
+
+  // Fallback: assume under storage symlink
   return API_ROOT + '/storage/' + cleaned;
 }
 
