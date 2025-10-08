@@ -5,6 +5,26 @@ import type { CreateLowonganPayload } from "@/types/lowongan";
 const API_BASE_URL =
   `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000"}/api/lowongan`;
 
+// Retrieve auth token from multiple possible keys (perusahaan, lpk, generic)
+function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  const keys = [
+    'access_token_perusahaan',
+    'access_token_lpk',
+    'access_token',
+  ];
+  for (const k of keys) {
+    const v = localStorage.getItem(k);
+    if (v && v.trim()) return v;
+  }
+  return null;
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function TampilAllLowongan() {
   const res = await axios.get(`${API_BASE_URL}/all-lowongan`);
   const payload = res.data;
@@ -18,9 +38,8 @@ export async function TampilAllLowongan() {
 }
 
 export async function getLowonganPerusahaan(): Promise<Lowongan[]> {
-  const token = localStorage.getItem("access_token_perusahaan");
   const res = await axios.get(`${API_BASE_URL}/lowongan-perusahaan`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { ...authHeaders() },
   });
 
   // mapping supaya frontend dapat versi rapih
@@ -86,11 +105,10 @@ export async function updateLowongan(
   payload: CreateLowonganPayload,
   opts?: { status?: UpdateStatus }
 ): Promise<void> {
-  const token = localStorage.getItem("access_token_perusahaan");
   const body = buildServerPayload(payload, opts);
   await axios.post(`${API_BASE_URL}/update-lowongan/${id}`,
     body,
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers: { ...authHeaders() } }
   );
 }
 
@@ -109,14 +127,13 @@ export async function aktifkanLowongan(
   id: number,
   data: { mulaiMagang?: string; selesaiMagang?: string; deadline_lamaran?: string }
 ): Promise<void> {
-  const token = localStorage.getItem('access_token_perusahaan');
   // Only include provided values; omit empties
   const body: Record<string, any> = { status: 'aktif' };
   if (data.deadline_lamaran) body.deadline_lamaran = data.deadline_lamaran;
   if (data.mulaiMagang) body.periode_awal = data.mulaiMagang;
   if (data.selesaiMagang) body.periode_akhir = data.selesaiMagang;
   await axios.post(`${API_BASE_URL}/update-lowongan/${id}`, body, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { ...authHeaders() },
   });
 }
 
@@ -125,8 +142,6 @@ export async function createLowongan(
   payload: CreateLowonganPayload,
   opts?: { status?: 'aktif' | 'tidak' }
 ): Promise<void> {
-  const token = localStorage.getItem('access_token_perusahaan');
-
   // Basic client-side guard for required fields (backend will also validate)
   const required: Array<[string, any]> = [
     ['judul_lowongan', payload.judul_lowongan?.trim()],
@@ -161,7 +176,7 @@ export async function createLowongan(
   };
 
   await axios.post(`${API_BASE_URL}/create-lowongan`, body, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { ...authHeaders() },
   });
 }
 

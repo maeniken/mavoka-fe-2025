@@ -60,37 +60,31 @@ import { useRouter } from "next/navigation";
 import PelatihanFormView from "@/app/components/upload-lowongan-pelatihan/PelatihanFormView";
 import { PelatihanFormValues } from "@/types/pelatihan";
 import { createPelatihan } from "@/lib/api-pelatihan";
-import { useState } from "react";
 
 export default function PelatihanBaruPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
 
   const handleSaveDraft = async (v: PelatihanFormValues) => {
     try {
-      setLoading(true);
       await createPelatihan(v, { publish: false }); // history_batch tidak dikirim
-      alert("Draft tersimpan.");
       router.replace("/upload-pelatihan?tab=draft");
     } catch (e: any) {
       console.error(e);
-      alert(e?.response?.data?.message || "Gagal menyimpan draft");
+      throw e;
     } finally {
-      setLoading(false);
+      // no-op; per-button loading handled in form
     }
   };
 
   const handlePublish = async (v: PelatihanFormValues) => {
     try {
-      setLoading(true);
       await createPelatihan(v, { publish: true }); // history_batch = []
-      alert("Pelatihan terpasang.");
       router.replace("/upload-pelatihan?tab=terpasang");
     } catch (e: any) {
       console.error(e);
-      alert(e?.response?.data?.message || "Gagal mengunggah");
+      throw e;
     } finally {
-      setLoading(false);
+      // no-op; per-button loading handled in form
     }
   };
 
@@ -101,7 +95,6 @@ export default function PelatihanBaruPage() {
         onSaveDraft={handleSaveDraft}
         onPublish={handlePublish}
       />
-      {loading && <p className="text-sm text-gray-500 mt-2">Processing…</p>}
     </div>
   );
 }

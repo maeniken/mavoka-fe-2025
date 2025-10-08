@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import PelatihanFormView from "@/app/components/upload-lowongan-pelatihan/PelatihanFormView";
 import { PelatihanFormValues, Pelatihan } from "@/types/pelatihan";
 import { getPelatihanSaya, updatePelatihan } from "@/lib/api-pelatihan";
+import { FullPageLoader } from "@/app/components/ui/LoadingSpinner";
 
 function toFormValues(p: Pelatihan): PelatihanFormValues {
   const list =
@@ -52,7 +53,10 @@ export default function EditPublishedPelatihanPage() {
 
   const initial = useMemo(() => (item ? toFormValues(item) : undefined), [item]);
 
-  if (loading) return <div className="p-6">Memuat…</div>;
+  if (loading)
+    return (
+      <FullPageLoader label="Memuat data pelatihan..." spinnerSize={56} variant="primary" styleType="dashed" />
+    );
   if (err) return <div className="p-6 text-red-600">{err}</div>;
   if (!item || !initial) return <div className="p-6">Data tidak ditemukan.</div>;
 
@@ -66,14 +70,8 @@ export default function EditPublishedPelatihanPage() {
         title="Ubah Data Pelatihan"
         initial={initial}
         onSave={async (v: PelatihanFormValues) => {
-          try {
-            // tetap publish=true agar statusnya tidak kembali ke draft
-            await updatePelatihan(Number(id), v, { publish: true });
-            alert("Perubahan tersimpan.");
-            router.replace("/upload-pelatihan?tab=terpasang");
-          } catch (e: any) {
-            alert(e?.response?.data?.message || "Gagal menyimpan perubahan");
-          }
+          // tetap publish=true agar statusnya tidak kembali ke draft
+          await updatePelatihan(Number(id), v, { publish: true });
         }}
       />
     </div>

@@ -106,3 +106,31 @@ export async function deletePelatihan(id: number) {
   const { data } = await api.delete(`/pelatihan/delete/${id}`, { headers });
   return data;
 }
+
+function fromApiBatch(b: any, index = 0): Batch {
+  const start = b.start ?? b.mulai ?? b.start_date ?? null;
+  const end = b.end ?? b.selesai ?? b.end_date ?? null;
+  return {
+    id: Number(b.id ?? index),
+    name: b.name ?? b.nama_batch ?? b.nama ?? `Batch ${index + 1}`,
+    start,
+    end,
+    status: (b.status as any) || computeBatchStatus({ start, end }),
+  };
+}
+
+export async function createBatch(
+  pelatihanId: number,
+  input: { name: string; start?: string | null; end?: string | null; status?: string | null }
+): Promise<Batch> {
+  const headers = requireLPKAuthHeader();
+  const payload = {
+    nama_batch: input.name,
+    mulai: input.start ?? null,
+    selesai: input.end ?? null,
+    ...(input.status ? { status: input.status } : {}),
+  } as any;
+  const { data } = await api.post(`/pelatihan/${pelatihanId}/batch`, payload, { headers });
+  const row = data?.data ?? data;
+  return fromApiBatch(row);
+}
