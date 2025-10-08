@@ -37,11 +37,38 @@ export default function TableDraftLowongan() {
     })();
   }, []);
 
+  // Sembunyikan scroll vertikal ketika loading
+  useEffect(() => {
+    if (!loading) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflowY = html.style.overflowY;
+    const prevBodyOverflowY = body.style.overflowY;
+
+    html.style.overflowY = "hidden";
+    body.style.overflowY = "hidden";
+
+    return () => {
+      html.style.overflowY = prevHtmlOverflowY;
+      body.style.overflowY = prevBodyOverflowY;
+    };
+  }, [loading]);
+
   const totalPages = Math.max(1, Math.ceil(rows.length / perPage));
   const start = (page - 1) * perPage;
+  // Urutkan terbaru dulu berdasarkan created_at
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      return tb - ta; // newest first
+    });
+  }, [rows]);
+
   const current = useMemo(
-    () => rows.slice(start, start + perPage),
-    [rows, start, perPage]
+    () => sortedRows.slice(start, start + perPage),
+    [sortedRows, start, perPage]
   );
 
   const headerCells: { key: string; node: React.ReactNode }[] = [
@@ -118,11 +145,53 @@ export default function TableDraftLowongan() {
 
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={12} className="px-4 py-10 text-center bg-white">
-                    Memuat…
-                  </td>
-                </tr>
+                // Skeleton loading rows
+                Array.from({ length: Math.max(5, Math.min(perPage, 10)) }).map(
+                  (_, idx) => (
+                    <tr
+                      key={`skeleton-${idx}`}
+                      className="border-t border-gray-100 bg-white"
+                      aria-busy="true"
+                    >
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-6 rounded bg-gray-200 animate-pulse" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-40 rounded bg-gray-200 animate-pulse" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-72 rounded bg-gray-200 animate-pulse" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-10 rounded bg-gray-200 animate-pulse mx-auto" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-28 rounded bg-gray-200 animate-pulse mx-auto" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-28 rounded bg-gray-200 animate-pulse mx-auto" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-28 rounded bg-gray-200 animate-pulse mx-auto" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-44 rounded bg-gray-200 animate-pulse" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-64 rounded bg-gray-200 animate-pulse" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-64 rounded bg-gray-200 animate-pulse" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-3 w-64 rounded bg-gray-200 animate-pulse" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="h-6 w-24 rounded bg-gray-200 animate-pulse mx-auto" />
+                      </td>
+                    </tr>
+                  )
+                )
               ) : error ? (
                 <tr>
                   <td
@@ -204,18 +273,19 @@ export default function TableDraftLowongan() {
           </table>
         </div>
       </div>
-
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        perPage={perPage}
-        onPerPageChange={(n) => {
-          setPerPage(n);
-          setPage(1);
-        }}
-        perPageOptions={[5, 10, 20]}
-      />
+      {!loading && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          perPage={perPage}
+          onPerPageChange={(n) => {
+            setPerPage(n);
+            setPage(1);
+          }}
+          perPageOptions={[5, 10, 20]}
+        />
+      )}
     </div>
   );
 }

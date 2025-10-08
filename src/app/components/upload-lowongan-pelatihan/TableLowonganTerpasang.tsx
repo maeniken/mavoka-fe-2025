@@ -9,7 +9,8 @@ import ConfirmModal from "./ConfirmModal";
 import SuccessModal from "@/app/components/registrasi/PopupBerhasil";
 import FormAktifkanModal from "./FormAktifkanModal";
 
-import { getLowonganPerusahaan } from "@/lib/api-lowongan";
+import { getLowonganPerusahaan, aktifkanLowongan, updateLowonganTerpasang } from "@/lib/api-lowongan";
+import type { CreateLowonganPayload } from "@/types/lowongan";
 import { Lowongan, StatusLowongan } from "@/types/lowongan";
 
 type AktifkanPayload = {
@@ -44,12 +45,23 @@ export default function TableLowonganTerpasang() {
     })();
   }, []);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / perPage));
+  // Urutkan: Nonaktif tampil paling atas, sisanya (Aktif) di bawah,
+  // dan dalam tiap kelompok urutkan dari yang terbaru (created_at desc)
+  const sortedRows = useMemo(() => {
+    const groupKey = (r: Lowongan) => (r.status === "Aktif" ? 1 : 0);
+    const byCreatedDesc = (a: Lowongan, b: Lowongan) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
+    const nonaktif = rows.filter(r => groupKey(r) === 0).sort(byCreatedDesc);
+    const aktif = rows.filter(r => groupKey(r) === 1).sort(byCreatedDesc);
+    return [...nonaktif, ...aktif];
+  }, [rows]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / perPage));
   const startIndex = (page - 1) * perPage;
 
   const current = useMemo(
-    () => rows.slice(startIndex, startIndex + perPage),
-    [rows, startIndex, perPage]
+    () => sortedRows.slice(startIndex, startIndex + perPage),
+    [sortedRows, startIndex, perPage]
   );
 
   const toArray = (v: string[] | string | undefined | null): string[] =>
@@ -120,7 +132,32 @@ export default function TableLowonganTerpasang() {
 
             <tbody>
               {loading ? (
-                <tr><td colSpan={13} className="px-4 py-10 text-center bg-white">Memuat…</td></tr>
+                // Loading skeleton rows
+                Array.from({ length: 5 }).map((_, rowIdx) => (
+                  <tr key={`skeleton-${rowIdx}`} className="border-t border-gray-100 bg-white">
+                    {headerCells.map((h, colIdx) => (
+                      <td key={`${h.key}-${colIdx}`} className="px-3 py-2">
+                        <div
+                          className={[
+                            "animate-pulse rounded",
+                            colIdx === 11 ? "h-5" : "h-4",
+                            // vary widths a bit for nicer look
+                            colIdx === 0 ? "w-8" :
+                            colIdx === 1 ? "w-40" :
+                            colIdx === 2 ? "w-64" :
+                            colIdx === 3 ? "w-12" :
+                            colIdx === 4 || colIdx === 5 || colIdx === 6 ? "w-32" :
+                            colIdx === 7 ? "w-48" :
+                            colIdx === 8 || colIdx === 9 || colIdx === 10 ? "w-64" :
+                            colIdx === 12 ? "w-28" :
+                            "w-full",
+                            "bg-gray-200"
+                          ].join(" ")}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ) : error ? (
                 <tr><td colSpan={13} className="px-4 py-10 text-center bg-white text-red-600">{error}</td></tr>
               ) : current.length === 0 ? (
@@ -217,9 +254,45 @@ export default function TableLowonganTerpasang() {
       <FormAktifkanModal
         open={form.open}
         onClose={() => setForm({ open: false })}
-        onSubmit={(payload) => {
-          if (form.id != null) applyAktifkan(form.id, payload as AktifkanPayload);
-          setForm({ open: false });
+        initial={
+          (() => {
+            const row = rows.find(r => r.id === form.id);
+            return row ? {
+              mulaiMagang: row.mulaiMagang ?? "",
+              selesaiMagang: row.selesaiMagang ?? "",
+              deadline_lamaran: row.deadline_lamaran ?? "",
+            } : undefined;
+          })()
+        }
+        onSubmit={async (payload) => {
+          try {
+            if (form.id != null) {
+              const row = rows.find(r => r.id === form.id);
+              if (!row) throw new Error('Data lowongan tidak ditemukan.');
+
+              // Bangun payload lengkap agar tanggal tersimpan pasti di backend
+              const fullPayload: CreateLowonganPayload = {
+                perusahaan_id: row.perusahaan_id,
+                judul_lowongan: row.judul_lowongan,
+                posisi: row.posisi,
+                deskripsi: row.deskripsi,
+                kuota: row.kuota,
+                lokasi_penempatan: row.lokasi_penempatan,
+                deadline_lamaran: payload.deadline_lamaran || row.deadline_lamaran,
+                mulaiMagang: payload.mulaiMagang || row.mulaiMagang || undefined,
+                selesaiMagang: payload.selesaiMagang || row.selesaiMagang || undefined,
+                tugas: Array.isArray(row.tugas) ? row.tugas : [],
+                persyaratan: Array.isArray(row.persyaratan) ? row.persyaratan : [],
+                keuntungan: Array.isArray(row.keuntungan) ? row.keuntungan : [],
+              };
+
+              await updateLowonganTerpasang(form.id, fullPayload);
+              applyAktifkan(form.id, payload as AktifkanPayload);
+              setForm({ open: false });
+            }
+          } catch (e: any) {
+            setError(e?.response?.data?.message || 'Gagal mengaktifkan lowongan');
+          }
         }}
       />
 

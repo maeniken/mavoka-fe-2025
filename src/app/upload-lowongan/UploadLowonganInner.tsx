@@ -41,7 +41,7 @@ export default function UploadLowonganInner() {
   };
 
   return (
-    <div className="flex flex-col h-full p-6">
+    <div className="flex flex-col p-6">
       <h3 className="mb-5">Lowongan Perusahaan</h3>
 
 {/* HEADER: tabs kiri + tombol kanan (tanpa scroll, kompak di mobile) */}
@@ -71,7 +71,7 @@ export default function UploadLowonganInner() {
 </div>
 
 
-      <div className="flex-1 overflow-y-auto p-6 mt-5 bg-white h-full rounded-xl">
+      <div className="p-6 mt-5 bg-white rounded-xl">
         {currentTab === "draft" ? <TableDraftLowongan /> : <TableLowonganTerpasang />}
       </div>
     </div>
