@@ -1,7 +1,6 @@
 "use client";
 
 import HeaderHome from "@/app/components/homePage/headerHomepage";
-// @ts-ignore: Suppress missing type declarations for AOS CSS
 import "aos/dist/aos.css";
 import Footer from "@/app/components/homePage/footer";
 import { useEffect, useState } from "react";

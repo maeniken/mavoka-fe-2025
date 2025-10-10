@@ -33,8 +33,8 @@ export default function PengaturanLayoutInner() {
 
   return (
     <DashboardLayout2 role="lpk">
-      <div className="flex flex-col h-full p-6">
-        <div className="flex bg-white shrink-0">
+      <div className="flex flex-col h-full p-4">
+        <div className="flex shrink-0">
           <ToggleTabs<TabType>
             tabs={tabs}
             value={currentTab}
@@ -42,7 +42,7 @@ export default function PengaturanLayoutInner() {
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 mt-5 bg-white h-full">
+        <div className="flex-1 overflow-y-auto mt-5 h-full">
           {currentTab === "data" ? <DataLpkPage /> : <AkunLpkPage />}
         </div>
       </div>

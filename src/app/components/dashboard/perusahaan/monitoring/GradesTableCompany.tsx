@@ -94,7 +94,7 @@ export default function GradesTableCompany({
   const isEditing = editingId !== null;
 
   return (
-    <div className="bg-white rounded-md p-4">
+    <div className=" p-4">
       <div className="rounded-[5px] ring-1 ring-[#D9D5EC] overflow-x-auto">
         <table className="w-full min-w-[920px] text-sm">
           <colgroup>

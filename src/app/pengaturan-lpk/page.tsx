@@ -189,13 +189,13 @@ export default function DataLpkPage() {
     setIsDirty(true);
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setForm((prev: any) => ({ ...prev, [name]: value }));
-    setIsDirty(true);
-  };
+const handleChange = (
+  e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+) => {
+  const { name, value } = e.target;
+  setForm((prev: any) => ({ ...prev, [name]: value }));
+  setIsDirty(true);
+};
 
   return (
     <div className="bg-white p-6 rounded-lg shadow relative">
@@ -234,7 +234,7 @@ export default function DataLpkPage() {
           {/* Akreditasi upload section */}
           <div className="mt-6">
             <label className="block text-sm font-semibold mb-2">Dokumen Akreditasi</label>
-            <div className="rounded-lg border-2 border-dashed border-[#0F67B1]/60 bg-[#F8FBFF] p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="rounded-lg border border-[#0F67B1]/60 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               {/* Preview */}
               <div className="w-full sm:w-auto flex items-center gap-4">
                 {(() => {
@@ -312,7 +312,7 @@ export default function DataLpkPage() {
               <button type="button" disabled={saving} onClick={() => { setIsDirty(false); }} className="px-4 py-2 border rounded text-[#0F67B1] border-[#0F67B1] bg-white disabled:opacity-50">Batal</button>
               <button type="button" disabled={saving} onClick={saveProfile} className="px-4 py-2 rounded bg-[#0F67B1] text-white flex items-center gap-2 disabled:opacity-60">
                 {saving && <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />}
-                {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                {saving ? 'Menyimpan...' : 'Simpan '}
               </button>
             </div>
           )}

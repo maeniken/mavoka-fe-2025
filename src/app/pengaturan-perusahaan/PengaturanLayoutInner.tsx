@@ -35,7 +35,7 @@ export default function PengaturanLayoutInner() {
 
   return (
     <DashboardLayout2 role="perusahaan">
-      <div className="flex flex-col h-full p-6">
+      <div className="flex flex-col h-full p-4">
         {/* Tabs */}
         <div className="flex shrink-0">
           <ToggleTabs<TabType>
@@ -46,7 +46,7 @@ export default function PengaturanLayoutInner() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 mt-5 bg-white h-full">
+        <div className="flex-1 overflow-y-auto mt-4 h-full">
           {currentTab === "data" ? <DataPerusahaanPage /> : <AkunPerusahaanPage />}
         </div>
       </div>

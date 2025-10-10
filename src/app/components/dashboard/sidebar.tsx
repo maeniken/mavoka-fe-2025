@@ -124,7 +124,7 @@ export default function Sidebar({
       },
       {
         name: "Data Siswa",
-        href: "/dashboard-sekolah/status-lamaran",
+        href: "/dashboard-sekolah/data-siswa",
         icon: <AiOutlineFileText size={20} />,
       },
       {

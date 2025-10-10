@@ -19,7 +19,7 @@ export default function PengaturanLayout({
   return (
     <DashboardLayout2 role="siswa">
       <div className="flex flex-col h-full p-6">
-        <div className="bg-white shrink-0">
+        <div className=" shrink-0">
           <div className="flex border-b border-gray-300 w-max">
             {tabs.map((tab) => (
               <Link
