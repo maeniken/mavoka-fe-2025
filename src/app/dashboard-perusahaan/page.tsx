@@ -14,11 +14,6 @@ export default function DashboardPerusahaan() {
   return (
     <DashboardLayout2
       role="perusahaan"
-      user={{
-        fullName: "Kepala Perusahaan",
-        orgName: "Perusahaan XYZ",
-        profilePic: "",
-      }}
     >
       {/* Section Top Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">

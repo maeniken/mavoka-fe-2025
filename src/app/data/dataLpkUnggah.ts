@@ -1,12 +1,6 @@
-export interface LowonganLpk {
-  id: number;
-  namaPelatihan: string;
-  deskripsi: string;
-  kategori: string;
-  capaian: string;
-}
+import { Pelatihan } from "@/types/pelatihan";
 
-export const dataLpkUnggah: LowonganLpk[] = [
+export const dataLpkUnggah: Pelatihan[] = [
   {
     id: 1,
     namaPelatihan: "Pelatihan Web Development",

@@ -37,6 +37,7 @@ export default function Filter({ positions, posisiId, status, onChangePosisi, on
           <option value="">Semua Status</option>
           <option value="lamar">Lamar</option>
           <option value="wawancara">Wawancara</option>
+          <option value="penawaran">Penawaran</option>
           <option value="diterima">Diterima</option>
           <option value="ditolak">Ditolak</option>
         </select>

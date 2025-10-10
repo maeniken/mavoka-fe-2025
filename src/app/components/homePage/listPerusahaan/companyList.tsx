@@ -6,6 +6,7 @@ import { Container } from "@/app/components/Container";
 import HeroSearch from "@/app/components/homePage/heroSearch";
 import Pagination from "@/app/components/homePage/pagination";
 import CompanyCard from "./CompanyCard";
+import CompanyCardSkeleton from "@/app/components/homePage/companyCardSkeleton";
 import { Company } from "@/types/company";
 import { getAllPerusahaan } from "@/lib/api-perusahaan";
 import { useResponsivePerPage, PER_PAGE } from "@/app/components/homePage/pageResponsive";
@@ -94,7 +95,7 @@ export default function PerusahaanList() {
         {loading && (
           <div className="grid gap-5 grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3">
             {Array.from({ length: itemsPerPage }).map((_, i) => (
-              <div key={i} className="h-[200px] rounded-lg border border-gray-200 bg-gray-100 animate-pulse" />
+              <CompanyCardSkeleton key={i} />
             ))}
           </div>
         )}

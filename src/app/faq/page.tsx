@@ -42,9 +42,6 @@ export default function FAQPage() {
       <RoleSelectorRow
         selectedRole={selectedRole}
         onSelectRole={setSelectedRole}
-        renderDetails={(role) => (
-          <RoleDetailsBlock roleKey={role as any} embedded />
-        )}
       />
 
       <FAQ />

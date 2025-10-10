@@ -2,16 +2,14 @@
 
 import * as React from "react";
 import { FiLogOut } from "react-icons/fi";
-import { useRouter } from "next/navigation";
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  onConfirm: () => void; 
 };
 
-export default function ConfirmLogoutDialog({ open, onClose }: Props) {
-  const router = useRouter();
-
+export default function ConfirmLogoutDialog({ open, onClose, onConfirm }: Props) {
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -20,13 +18,6 @@ export default function ConfirmLogoutDialog({ open, onClose }: Props) {
   }, [open, onClose]);
 
   if (!open) return null;
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    router.push("/");
-  };
 
   return (
     <div className="fixed inset-0 z-50">
@@ -49,14 +40,14 @@ export default function ConfirmLogoutDialog({ open, onClose }: Props) {
 
             <div className="mt-8 flex items-center justify-center gap-5">
               <button
-                onClick={handleLogout}
+                onClick={onConfirm} 
                 className="flex items-center justify-center h-11 w-36 rounded-md text-white bg-[#BA0000] font-semibold hover:bg-red-800 transition"
               >
                 Ya
               </button>
               <button
                 onClick={onClose}
-                className="flex items-center justify-center h-11 w-48 rounded-md bg-[#0F67B1] text-white hover:bg-[#0F67B1]/80 font-semibold transition"
+                className="flex items-center justify-center h-11 w-32 rounded-md bg-[#0F67B1] text-white hover:bg-[#0F67B1]/80 font-semibold transition"
               >
                 Tidak
               </button>

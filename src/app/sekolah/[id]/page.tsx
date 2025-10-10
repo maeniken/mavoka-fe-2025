@@ -3,14 +3,15 @@
 import HeaderHome from "@/app/components/homePage/headerHomepage";
 import "aos/dist/aos.css";
 import Footer from "@/app/components/homePage/footer";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { getSchoolById } from "@/services/sekolah";
+import { getSchoolById, getJurusanBySekolah } from "@/services/sekolah";
 import { School } from "@/types/school";
 import DetailDescription from "@/app/components/homePage/detail-role/DetailDescription";
 import DetailHeader from "@/app/components/homePage/detail-role/DetailHeader";
 import KompetensiKeahlian from "@/app/components/homePage/listSekolah/detail-sekolah/KompetensiKeahlian";
 import { Container } from "@/app/components/Container";
+import { FullPageLoader } from "@/app/components/ui/LoadingSpinner";
 
 export default function DetailSekolahPage() {
   const { id } = useParams();
@@ -21,8 +22,17 @@ export default function DetailSekolahPage() {
     if (!id) return;
     (async () => {
       try {
-        const data = await getSchoolById(id as string);
-        setSekolah(data);
+        const [schoolData, jurusan] = await Promise.all([
+          getSchoolById(id as string),
+          getJurusanBySekolah(id as string)
+        ]);
+        if (schoolData) {
+          // Jika schoolData.jurusan kosong, isi dari endpoint jurusan
+            schoolData.jurusan = (schoolData.jurusan && schoolData.jurusan.length > 0)
+              ? schoolData.jurusan
+              : jurusan;
+        }
+        setSekolah(schoolData);
       } catch (error) {
         console.error("Gagal fetch data Sekolah:", error);
         setSekolah(null);
@@ -32,7 +42,20 @@ export default function DetailSekolahPage() {
     })();
   }, [id]);
 
-  if (loading) return <p className="text-center py-10">Loading...</p>;
+  const logoSrc = useMemo(() => {
+    if (!sekolah) return "/img/sejarah-mavoka.png"; // fallback global
+    return sekolah.logoUrl || "/img/sejarah-mavoka.png";
+  }, [sekolah]);
+
+  if (loading) return (
+    <>
+      <HeaderHome />
+      <main>
+        <FullPageLoader label="Memuat detail sekolah" />
+      </main>
+      <Footer />
+    </>
+  );
   if (!sekolah)
     return <p className="text-center py-10">Data sekolah tidak ditemukan</p>;
 
@@ -41,16 +64,13 @@ export default function DetailSekolahPage() {
       <HeaderHome />
       <main>
         <Container className="py-6">
-          <DetailHeader
-            name={sekolah.name}
-            logo={sekolah.logoUrl || "/img/sejarah-mavoka.png"}
-          />
+          <DetailHeader name={sekolah.name} logo={logoSrc} />
           <DetailDescription
             type="sekolah"
             email={sekolah.email ?? "-"}
             address={sekolah.address ?? "-"}
             npsn={sekolah.npsn ?? "-"}
-            website={sekolah.web_sekolah ?? "-"}
+            website={sekolah.website ?? "-"}
           />
           <KompetensiKeahlian jurusan={sekolah.jurusan} />
         </Container>

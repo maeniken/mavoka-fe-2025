@@ -2,8 +2,12 @@ name: Build and Deploy Frontend to Development
 
 on:
   push:
-    branches: [ 'dev' ]
+    branches: [ 'main' ]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -22,13 +26,18 @@ jobs:
       - name: Build Container with Docker Compose
         run: |
           docker compose --file docker-compose-dev.yml build --no-cache
-          docker image save mavoka-fe-2025-dev-img:latest --output mavoka-fe-2025-dev-img.tar
+          docker image save mavoka-fe-2025-dev-img:${{ github.sha }} | gzip > mavoka-fe-2025-dev-img.tar.gz
 
       - name: Copy Image with rsync over SSH
         uses: burnett01/rsync-deployments@7.0.2
         with:
-          switches: -avzr --delete
-          path: './mavoka-fe-2025-dev-img.tar'
+          switches: >-
+            -avh
+            --timeout 60
+            --progress
+            --no-compress
+            --bwlimit 5120
+          path: './mavoka-fe-2025-dev-img.tar.gz'
           remote_path: ${{ secrets.SCP_PATH }}
           remote_host: ${{ secrets.SSH_HOST }}
           remote_port: ${{ secrets.SSH_PORT }}
@@ -44,8 +53,9 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ${{ secrets.SCP_PATH }}
-            git pull origin dev
+            git stash
+            git pull origin main
             echo "${{ vars.ENV_DEV }}" > .env.development
-            docker compose --file docker-compose-dev.yml down --rmi all
-            docker image load --input mavoka-fe-2025-dev-img.tar
-            docker compose --file docker-compose-dev.yml up --detach
+            docker image load --input mavoka-fe-2025-dev-img.tar.gz
+            docker service update --image mavoka-fe-2025-dev-img:${{ github.sha }} mavoka_development_frontend
+            rm mavoka-fe-2025-dev-img.tar.gz

@@ -33,6 +33,7 @@ export default function FormSMK() {
     email: string;
     role: string;
   } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const onSubmit = async (data: FormValues) => {
     const mappedData: RegisterSiswa = {
@@ -50,9 +51,35 @@ export default function FormSMK() {
       setRedirectInfo({ email: data.email, role: "siswa" });
       setShowSuccessPopup(true);
       reset();
+      setErrorMsg(null);
     } catch (err: any) {
-      console.error("Gagal:", err.response?.data || err.message);
-      alert("Terjadi kesalahan saat mendaftar siswa.");
+      // axios error shape: err.response contains status/statusText/data
+      const resp = err.response;
+      console.error("Gagal mendaftar siswa:", {
+        status: resp?.status,
+        statusText: resp?.statusText,
+        data: resp?.data,
+        message: err.message,
+      });
+
+      if (resp) {
+        const data = resp.data;
+        if (data) {
+          if (data.errors) {
+            const firstKey = Object.keys(data.errors)[0];
+            const msg = Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : JSON.stringify(data.errors[firstKey]);
+            setErrorMsg(msg || `Validasi gagal (HTTP ${resp.status})`);
+          } else if (data.message) {
+            setErrorMsg(`${data.message} (HTTP ${resp.status})`);
+          } else {
+            setErrorMsg(`Terjadi kesalahan server (HTTP ${resp.status}): ${JSON.stringify(data)}`);
+          }
+        } else {
+          setErrorMsg(`Terjadi kesalahan (HTTP ${resp.status} ${resp.statusText})`);
+        }
+      } else {
+        setErrorMsg(err.message || 'Terjadi kesalahan saat mendaftar siswa.');
+      }
     } finally {
       setLoading(false);
     }
@@ -106,6 +133,8 @@ export default function FormSMK() {
       <Button type="submit" className="w-full mb-3" disabled={loading}>
         {loading ? "Mengirim..." : "Daftar"}
       </Button>
+
+      {errorMsg && <div className="text-red-600 text-sm mb-3">{errorMsg}</div>}
 
       <p className="text-xs text-center text-gray-600 mb-3">
         Sudah punya akun?{" "}

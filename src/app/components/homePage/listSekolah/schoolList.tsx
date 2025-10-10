@@ -6,18 +6,10 @@ import { Container } from "@/app/components/Container";
 import HeroSearch from "@/app/components/homePage/heroSearch";
 import Pagination from "@/app/components/homePage/pagination";
 import SchoolCard from "@/app/components/homePage/listSekolah/schoolCard";
+import { SchoolCardSkeleton } from "@/app/components/homePage/schoolCardSkeleton";
 import { TampilAllSekolah } from "@/lib/api-sekolah";
 import { useResponsivePerPage, PER_PAGE } from "@/app/components/homePage/pageResponsive";
-
-export type School = {
-  id: number | string;
-  name: string;
-  address: string;
-  type?: string | null;
-  website?: string | null;
-  logoUrl: string;
-  slug?: string;
-};
+import { School } from "@/types/school";
 
 export default function SchoolList() {
   const [data, setData] = useState<School[]>([]);
@@ -30,7 +22,6 @@ export default function SchoolList() {
   const q = sp.get("q")?.trim() ?? "";
   const currentPage = Math.max(1, Number(sp.get("page") ?? 1) || 1);
 
-  // Items per page: desktop 10 (2x5), tablet 6 (2x3), mobile 6 (1x6)
   const itemsPerPage = useResponsivePerPage(PER_PAGE.sekolah);
 
   useEffect(() => {
@@ -54,11 +45,9 @@ export default function SchoolList() {
           id: r.id,
           name: r.nama_sekolah ?? "Sekolah",
           address: r.alamat ?? "-",
-          // jenis sekolah belum ada di payload contoh; fallback ke field yang mungkin ada
           type: r.jenis_smk ?? r.jenis_sekolah ?? r.status_verifikasi ?? null,
           website: normalizeUrl(r.web_sekolah ?? null),
-          // logo & slug opsional kalau backend sediakan
-          logoUrl: r.logo_url ?? r.logo ?? "/assets/img/placeholder-logo.png",
+          logoUrl: r.logo_url ?? r.logo ?? null,
           slug: r.slug,
         }));
 
@@ -73,7 +62,6 @@ export default function SchoolList() {
     };
   }, []);
 
-  // Filter lokal berdasar query string (?q=)
   const filtered = useMemo(() => {
     if (!q) return data;
     const s = q.toLowerCase();
@@ -129,14 +117,10 @@ export default function SchoolList() {
           {loading ? "Memuat data…" : `${totalItems} sekolah ditemukan`}
         </p>
 
-        {/* Loading skeleton */}
         {loading && (
           <div className="grid gap-5 grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-2">
             {Array.from({ length: itemsPerPage }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[156px] rounded-[8px] border border-[#D6DDEB] bg-gray-100 animate-pulse"
-              />
+              <SchoolCardSkeleton key={i} />
             ))}
           </div>
         )}
@@ -153,14 +137,12 @@ export default function SchoolList() {
               </p>
             ) : (
               <>
-                {/* Grid: mobile 1, tablet 2, desktop 2 */}
                 <div className="grid gap-5 grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-2">
                   {paged.map((s) => (
                     <SchoolCard key={s.id} data={s} />
                   ))}
                 </div>
 
-                {/* Pagination */}
                 <div className="mt-8 flex justify-center">
                   <Pagination
                     currentPage={safePage}

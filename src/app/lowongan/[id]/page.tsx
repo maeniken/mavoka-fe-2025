@@ -17,7 +17,11 @@ import Keuntungan from "@/app/components/homePage/cari-lowongan/detail-lowongan/
 import Tugas from "@/app/components/homePage/cari-lowongan/detail-lowongan/Tugas";
 import LamarButton from "@/app/components/homePage/cari-lowongan/detail-lowongan/LamarButton";
 import JobCard from "@/app/components/homePage/jobCard";
+import JobCardSkeleton from "@/app/components/homePage/jobCardSkeleton";
 import { ArrowRight } from "lucide-react";
+import Kuota from "@/app/components/homePage/cari-lowongan/detail-lowongan/Kuota";
+import { FullPageLoader } from "@/app/components/ui/LoadingSpinner";
+
 
 type Job = {
   id: number;
@@ -38,6 +42,9 @@ export default function DetailLowonganPage() {
   const [company, setCompany] = useState<Company | null>(null);
   const [loadingLowongan, setLoadingLowongan] = useState(true);
   const [loadingCompany, setLoadingCompany] = useState(true);
+  const [relatedJobs, setRelatedJobs] = useState<Job[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(true);
+  const [showCount, setShowCount] = useState(8);
 
   useEffect(() => {
     if (!id) return;
@@ -67,8 +74,40 @@ export default function DetailLowonganPage() {
     })();
   }, [lowongan]);
 
-  if (loadingLowongan || loadingCompany)
-    return <p className="text-center py-10">Loading...</p>;
+  // Sinkronkan related jobs dari data perusahaan (company.jobs) jika tersedia
+  useEffect(() => {
+    if (!company || !lowongan) return;
+    setLoadingRelated(true);
+    // company.jobs sudah hanya memuat lowongan aktif (service menormalkan)
+    const list = (company.jobs || [])
+      .filter((j) => j.id !== lowongan.id) // exclude current
+      .map((j) => ({
+        id: j.id,
+        judul_lowongan: j.judul_lowongan,
+        posisi: j.posisi,
+        kuota: j.kuota,
+        lokasi_penempatan: j.lokasi_penempatan,
+        deadline_lamaran: j.deadline_lamaran,
+        perusahaan: {
+          nama_perusahaan: company.name,
+          logo_perusahaan: company.logoUrl ?? null,
+        },
+      }));
+    setRelatedJobs(list);
+    setLoadingRelated(false);
+  }, [company, lowongan]);
+
+  if (loadingLowongan || loadingCompany) {
+    return (
+      <>
+        <HeaderHome />
+        <main>
+          <FullPageLoader label="Memuat detail lowongan" />
+        </main>
+        <Footer />
+      </>
+    );
+  }
   if (!lowongan)
     return <p className="text-center py-10">Data lowongan tidak ditemukan</p>;
   if (!company)
@@ -81,8 +120,9 @@ export default function DetailLowonganPage() {
         <Container className="py-6">
           <LowonganHeader
             name={lowongan.judul_lowongan}
-            subtitle={lowongan.perusahaan.nama_perusahaan}
+            subtitle={lowongan.perusahaan?.nama_perusahaan ?? "-"}
           />
+          <Kuota value={lowongan.kuota} />
           <DetailDescription
             type="lowongan"
             title="Deskripsi Posisi"
@@ -90,51 +130,64 @@ export default function DetailLowonganPage() {
             deadline_lamaran={lowongan.deadline_lamaran ?? "-"}
             address={lowongan.lokasi_penempatan ?? "-"}
           />
-          <Tugas tugas={lowongan.benefit ?? "-"} />
-          {/* tambah atribut tugas di backend */}
-          <Persyaratan persyaratan={lowongan.persyaratan ?? "-"} />
-          <Keuntungan benefit={lowongan.benefit ?? "-"} />
+          <Tugas tugas={lowongan.tugas ?? []} />
+          <Persyaratan persyaratan={lowongan.persyaratan ?? []} />
+          <Keuntungan benefit={lowongan.keuntungan ?? []} />
           <LamarButton />
           <div className="mt-10 text-center">
             <h3>Temukan Posisi Magang Impianmu Di sini</h3>
           </div>
-
-          {company.jobs && company.jobs.length > 0 ? (
-            <>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold">
-                  Lowongan <span className="text-[#0F67B1]">Aktif</span>
-                </h2>
-
-                <a
-                  href="/list-perusahaan"
-                  className="text-[#0F67B1] hover:underline flex items-center gap-1"
-                >
-                  Lihat semua lowongan <ArrowRight size={20} />
-                </a>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-                {company.jobs.map((job: Job) => (
-                  <JobCard
-                    key={job.id}
-                    id={job.id}
-                    companyLogo={job.perusahaan?.logo_perusahaan ?? null}
-                    title={job.judul_lowongan}
-                    company={job.perusahaan.nama_perusahaan}
-                    location={job.lokasi_penempatan}
-                    positions={job.kuota}
-                    closingDate={job.deadline_lamaran}
-                  />
+        </Container>
+        {/* Section Lowongan lain dari perusahaan yang sama */}
+        {relatedJobs.length > 0 && (
+          <Container className="py-10 border-t mt-12">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">
+                Lowongan <span className="text-[#0F67B1]">Aktif</span>
+              </h2>
+              <a
+                href="/list-perusahaan" /* TODO: ganti ke halaman perusahaan spesifik */
+                className="text-sm text-[#0F67B1] hover:underline flex items-center gap-1"
+              >
+                Lihat semua lowongan <ArrowRight size={18} />
+              </a>
+            </div>
+            {loadingRelated ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <JobCardSkeleton key={i} />
                 ))}
               </div>
-            </>
-          ) : (
-            <p className="col-span-full text-center text-gray-500 mt-5">
-              Belum ada lowongan lain dari perusahaan ini
-            </p>
-          )}
-        </Container>
+            ) : relatedJobs && relatedJobs.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {relatedJobs.slice(0, showCount).map((job: any) => (
+                    <JobCard
+                      key={job.id}
+                      id={job.id}
+                      companyLogo={job.perusahaan?.logo_perusahaan ?? null}
+                      title={job.judul_lowongan}
+                      company={job.perusahaan.nama_perusahaan}
+                      location={job.lokasi_penempatan}
+                      positions={job.kuota}
+                      closingDate={job.deadline_lamaran}
+                    />
+                  ))}
+                </div>
+                {showCount < relatedJobs.length && (
+                  <div className="flex justify-center mt-8">
+                    <button
+                      onClick={() => setShowCount((c) => c + 6)}
+                      className="px-5 py-2 rounded-md border text-sm font-medium text-[#0F67B1] border-[#0F67B1] hover:bg-[#0F67B1] hover:text-white transition"
+                    >
+                      Lihat lebih banyak
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : null}
+          </Container>
+        )}
       </main>
       <Footer />
     </>

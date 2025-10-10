@@ -218,12 +218,51 @@ const UploadManual: React.FC<Props> = ({ sekolahId }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+function resolveSekolahId(): number | null {
+  // 1) prop menang
+  if (typeof sekolahId === "number") return sekolahId;
+
+  // 2) id_sekolah (konvensi yang kita set di login)
+  const idByRole = typeof window !== "undefined" ? window.localStorage.getItem("id_sekolah") : null;
+  if (idByRole && !Number.isNaN(Number(idByRole))) return Number(idByRole);
+
+  // 3) sekolah_id (kalau BE / kode lama pernah set ini)
+  const legacy = typeof window !== "undefined" ? window.localStorage.getItem("sekolah_id") : null;
+  if (legacy && !Number.isNaN(Number(legacy))) return Number(legacy);
+
+  // 4) actor JSON { role, id } → pakai jika role === 'sekolah'
+  const actorRaw = typeof window !== "undefined" ? window.localStorage.getItem("actor") : null;
+  if (actorRaw) {
+    try {
+      const actor = JSON.parse(actorRaw);
+      if (actor?.role === "sekolah") {
+        const v = actor?.id;
+        if (typeof v === "number") return v;
+        if (typeof v === "string" && !Number.isNaN(Number(v))) return Number(v);
+      }
+    } catch {}
+  }
+
+  // 5) user.sekolah?.id (kalau backend kirim nested)
+  const userRaw = typeof window !== "undefined" ? window.localStorage.getItem("user") : null;
+  if (userRaw) {
+    try {
+      const u = JSON.parse(userRaw);
+      const nested = u?.sekolah?.id ?? u?.sekolah_id;
+      if (typeof nested === "number") return nested;
+      if (typeof nested === "string" && !Number.isNaN(Number(nested))) return Number(nested);
+    } catch {}
+  }
+
+  return null;
+}
+
+// efek: isi sid sekali saat mount/ketika prop berubah
 useEffect(() => {
-  if (sid != null) return;
-  const raw = window.localStorage.getItem('sekolah_id');
-  const v = raw != null ? Number(raw) : NaN;
-  if (!Number.isNaN(v)) setSid(v);
-}, [sid]);
+  if (sid != null) return; // sudah ada
+  const found = resolveSekolahId();
+  if (found != null) setSid(found);
+}, [sid, sekolahId]);
 
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {

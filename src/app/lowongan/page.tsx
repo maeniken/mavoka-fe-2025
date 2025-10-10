@@ -1,5 +1,6 @@
-"use client"
+"use client";
 
+import { Suspense } from "react";
 import HeaderHome from "../components/homePage/headerHomepage";
 import { SearchLowonganBar } from "@/app/components/homePage/cari-lowongan/SearchLowonganBar";
 import CariLowonganResult from "../components/homePage/cari-lowongan/cariLowongan";
@@ -14,8 +15,15 @@ export default function CariLowonganPage() {
           Temukan Tempat Magang <br /> Impianmu di sini
         </h2>
       </section>
-      <SearchLowonganBar />
-      <CariLowonganResult />
+
+      <Suspense fallback={<div>Loading pencarian...</div>}>
+        <SearchLowonganBar />
+      </Suspense>
+
+      <Suspense fallback={<div>Loading hasil...</div>}>
+        <CariLowonganResult />
+      </Suspense>
+
       <Footer />
     </>
   );

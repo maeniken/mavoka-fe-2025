@@ -11,7 +11,7 @@ export const registerSekolah = (data: RegisterSekolah) => {
 };
 
 export const registerSiswa = (data: RegisterSiswa) => {
-  return axios.post(`${API_BASE_URL}/siswa/lengkapi-registrasi`, data);
+  return axios.post(`${API_BASE_URL}/register/siswa`, data);
 };
 
 export const registerPerusahaan = (data: RegisterPerusahaan) => {

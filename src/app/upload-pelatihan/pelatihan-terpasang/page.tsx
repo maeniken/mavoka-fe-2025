@@ -1,10 +1,12 @@
 "use client";
-import TableLowonganTerpasang from "@/app/components/upload-lowongan-pelatihan/TableLowonganTerpasang";
+//import TableLowonganTerpasang from "@/app/components/upload-lowongan-pelatihan/TableLowonganTerpasang";
+import TablePelatihanTerpasang from "@/app/components/upload-lowongan-pelatihan/TablePelatihanTerpasang";
 
-export default function ProfilePage() {
+export default function PelatihanTerpasangPage() {
   return (
     <div className="p-4">
-      <TableLowonganTerpasang role="lpk" />
+      {/*<TableLowonganTerpasang role="lpk" />*/}
+      <TablePelatihanTerpasang />
     </div>
   );
 }

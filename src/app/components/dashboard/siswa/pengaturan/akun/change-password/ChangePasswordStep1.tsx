@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { verifyPassword } from '@/services/account';
 import { PiLockKey } from "react-icons/pi";
 import { FaEye, FaEyeSlash } from 'react-icons/fa'
 
@@ -18,6 +19,8 @@ export default function ChangePasswordStep1({
   onCancel,
 }: ChangePasswordStep1Props) {
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <>
@@ -44,13 +47,41 @@ export default function ChangePasswordStep1({
         </button>
       </div>
 
-      <div className="flex mt-4 justify-center">
-        <button
-          className="bg-[#0F67B1] text-white px-4 py-2 rounded"
-          onClick={onNext}
-        >
-          Lanjutkan
-        </button>
+      <div className="flex mt-4 justify-center flex-col items-center gap-2">
+        {error && <div className="text-sm text-red-600">{error}</div>}
+        <div className="flex gap-2">
+          <button
+            className="bg-[#0F67B1] text-white px-4 py-2 rounded disabled:opacity-60"
+            onClick={async () => {
+              setError(null);
+              if (!oldPassword || oldPassword.trim().length === 0) {
+                setError('Masukkan kata sandi lama');
+                return;
+              }
+              setLoading(true);
+              try {
+                const role = (localStorage.getItem('role') || 'siswa').toLowerCase() as any;
+                await verifyPassword(role, oldPassword);
+                onNext();
+              } catch (err: any) {
+                setError(err?.message || 'Kata sandi tidak cocok');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+          >
+            {loading ? 'Memeriksa...' : 'Lanjutkan'}
+          </button>
+
+          <button
+            className="border px-4 py-2 rounded"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Batal
+          </button>
+        </div>
       </div>
     </>
   );

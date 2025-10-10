@@ -22,6 +22,20 @@ export default function ChangePasswordStep2({
 }: ChangePasswordStep2Props) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const validateAndNext = () => {
+    setError(null);
+    if (!newPassword || newPassword.length < 6) {
+      setError('Kata sandi baru harus minimal 6 karakter');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Kata sandi dan konfirmasi tidak cocok');
+      return;
+    }
+    onNext();
+  };
 
   return (
     <div className="w-full">
@@ -63,13 +77,22 @@ export default function ChangePasswordStep2({
         </button>
       </div>
 
-      <div className="flex mt-4 justify-center">
-        <button
-          className="bg-[#0F67B1] text-white px-4 py-2 rounded"
-          onClick={onNext}
-        >
-          Lanjutkan
-        </button>
+      <div className="flex mt-4 justify-center flex-col items-center gap-2">
+        {error && <div className="text-sm text-red-600">{error}</div>}
+        <div className="flex gap-2">
+          <button
+            className="bg-[#0F67B1] text-white px-4 py-2 rounded disabled:opacity-60"
+            onClick={validateAndNext}
+          >
+            Lanjutkan
+          </button>
+          <button
+            className="border px-4 py-2 rounded"
+            onClick={onBack}
+          >
+            Kembali
+          </button>
+        </div>
       </div>
     </div>
   );

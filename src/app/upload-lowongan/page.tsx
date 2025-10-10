@@ -1,10 +1,17 @@
+//import UploadLowonganLayout from "../upload-lowongan/layout";
+
+//export default function UploadLowonganPage() {
+//  return <UploadLowonganLayout view="list" />;
+//}
 "use client";
-import TableDraftLowongan from "@/app/components/upload-lowongan-pelatihan/TableDraftLowongan";
-import { dummyLowongan } from "@/app/data/dummyLowongan";
 
-export default function ProfilePage() {
+import { Suspense } from "react";
+import UploadLowonganInner from "./UploadLowonganInner";
 
+export default function PageUploadLowongan() {
   return (
-          <TableDraftLowongan role="perusahaan" data={dummyLowongan} />
-    );
+    <Suspense fallback={<p className="p-6 text-center">Loading lowongan...</p>}>
+      <UploadLowonganInner />
+    </Suspense>
+  );
 }

@@ -13,6 +13,7 @@ import CompanyDetail from "@/app/components/homePage/listPerusahaan/detail-perus
 import { Container } from "@/app/components/Container";
 import JobCard from "@/app/components/homePage/jobCard";
 import { ArrowRight } from "lucide-react";
+import { FullPageLoader } from "@/app/components/ui/LoadingSpinner";
 
 type Job = {
   id: number;
@@ -36,12 +37,36 @@ export default function DetailPerusahaanPage() {
     if (!id) return;
     (async () => {
       const data = await getCompanyById(id as string);
-      setCompany(data);
+      if (data && data.jobs?.length) {
+        const base = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000';
+        data.jobs = data.jobs.map(j => {
+          let logo = j.perusahaan?.logo_perusahaan ?? null;
+          if (logo && !/^https?:\/\//i.test(logo)) {
+            logo = base.replace(/\/$/, '') + '/' + logo.replace(/^\//,'');
+          }
+          return {
+            ...j,
+            perusahaan: {
+              ...j.perusahaan,
+              logo_perusahaan: logo,
+            }
+          };
+        });
+      }
+      setCompany(data ?? null);
       setLoading(false);
     })();
   }, [id]);
 
-  if (loading) return <p className="text-center py-10">Loading...</p>;
+  if (loading) return (
+    <>
+      <HeaderHome />
+      <main>
+        <FullPageLoader label="Memuat detail perusahaan" />
+      </main>
+      <Footer />
+    </>
+  );
   if (!company)
     return <p className="text-center py-10">Data perusahaan tidak ditemukan</p>;
 

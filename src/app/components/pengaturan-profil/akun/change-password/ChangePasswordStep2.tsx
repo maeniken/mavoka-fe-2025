@@ -8,7 +8,8 @@ interface ChangePasswordStep2Props {
   confirmPassword: string;
   setNewPassword: (value: string) => void;
   setConfirmPassword: (value: string) => void;
-  onNext: () => void;
+  onNext: () => Promise<void> | void;
+  loading?: boolean;
   onBack: () => void;
 }
 
@@ -18,6 +19,7 @@ export default function ChangePasswordStep2({
   setNewPassword,
   setConfirmPassword,
   onNext,
+  loading = false,
   onBack,
 }: ChangePasswordStep2Props) {
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -65,10 +67,11 @@ export default function ChangePasswordStep2({
 
       <div className="flex mt-4 justify-center">
         <button
-          className="bg-[#0F67B1] text-white px-4 py-2 rounded"
+          className="bg-[#0F67B1] text-white px-4 py-2 rounded disabled:opacity-60"
           onClick={onNext}
+          disabled={loading}
         >
-          Lanjutkan
+          {loading ? 'Memproses...' : 'Lanjutkan'}
         </button>
       </div>
     </div>

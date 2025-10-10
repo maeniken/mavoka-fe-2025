@@ -1,310 +1,308 @@
 "use client";
-import React, { useState } from "react";
-import { FaRegEdit } from "react-icons/fa";
+
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { BiEdit } from "react-icons/bi";
+
+import Pagination from "@/app/components/dashboard/Pagination";
 import ConfirmModal from "./ConfirmModal";
-import FormAktifkanModal from "./FormAktifkanModal";
-import TambahBranch from "./TambahBranch";
 import SuccessModal from "@/app/components/registrasi/PopupBerhasil";
-import {
-  dataPerusahaanUnggah,
-  LowonganPerusahaan,
-} from "@/app/data/dataPerusahaanUnggah";
-import { dataLpkUnggah, LowonganLpk } from "@/app/data/dataLpkUnggah";
+import FormAktifkanModal from "./FormAktifkanModal";
 
-type Role = "perusahaan" | "lpk";
+import { getLowonganPerusahaan, aktifkanLowongan, updateLowonganTerpasang } from "@/lib/api-lowongan";
+import type { CreateLowonganPayload } from "@/types/lowongan";
+import { Lowongan, StatusLowongan } from "@/types/lowongan";
 
-export default function TableLowonganTerpasang({ role }: { role: Role }) {
-  const [data, setData] = useState<(LowonganPerusahaan | LowonganLpk)[]>(
-    role === "perusahaan" ? dataPerusahaanUnggah : dataLpkUnggah
+type AktifkanPayload = {
+  mulaiMagang: string;
+  selesaiMagang: string;
+  deadline_lamaran: string;
+};
+
+export default function TableLowonganTerpasang() {
+  const [rows, setRows] = useState<Lowongan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [perPage, setPerPage] = useState(10);
+  const [page, setPage] = useState(1);
+
+  // urutan modal
+  const [confirm, setConfirm] = useState<{ open: boolean; id?: number }>({ open: false });
+  const [form, setForm] = useState<{ open: boolean; id?: number }>({ open: false });
+  const [success, setSuccess] = useState<{ open: boolean; msg: string }>({ open: false, msg: "" });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await getLowonganPerusahaan();
+        setRows(data);
+      } catch (e: any) {
+        setError(e?.response?.data?.message || "Gagal memuat data");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Urutkan: Nonaktif tampil paling atas, sisanya (Aktif) di bawah,
+  // dan dalam tiap kelompok urutkan dari yang terbaru (created_at desc)
+  const sortedRows = useMemo(() => {
+    const groupKey = (r: Lowongan) => (r.status === "Aktif" ? 1 : 0);
+    const byCreatedDesc = (a: Lowongan, b: Lowongan) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
+    const nonaktif = rows.filter(r => groupKey(r) === 0).sort(byCreatedDesc);
+    const aktif = rows.filter(r => groupKey(r) === 1).sort(byCreatedDesc);
+    return [...nonaktif, ...aktif];
+  }, [rows]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / perPage));
+  const startIndex = (page - 1) * perPage;
+
+  const current = useMemo(
+    () => sortedRows.slice(startIndex, startIndex + perPage),
+    [sortedRows, startIndex, perPage]
   );
 
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const totalPages = Math.ceil(data.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
-
-  const sortedData =
-    role === "perusahaan"
-      ? [...(data as LowonganPerusahaan[])].sort((a, b) => {
-          if (a.status === "Aktif" && b.status !== "Aktif") return -1;
-          if (a.status !== "Aktif" && b.status === "Aktif") return 1;
-          return 0;
-        })
-      : data;
-
-  const currentData = sortedData.slice(startIndex, startIndex + rowsPerPage);
-
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [showFormAktifkan, setShowFormAktifkan] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [actionType, setActionType] = useState<
-    "Aktifkan" | "Nonaktifkan" | null
-  >(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-
-  const [showTambahBranch, setShowTambahBranch] = useState(false);
-
-  const handlePrev = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  const toArray = (v: string[] | string | undefined | null): string[] =>
+    Array.isArray(v) ? v : typeof v === "string" && v.trim() ? [v] : [];
+  const summarize = (v: string[] | string | undefined, max = 2) => {
+    const arr = toArray(v);
+    return arr.length <= max ? arr.join(", ") : `${arr.slice(0, max).join(", ")} +${arr.length - max} lainnya`;
   };
+  const dash = (v?: string | number | null) => (v ? String(v) : "-");
 
-  const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
+  const headerCells: { key: string; node: React.ReactNode }[] = [
+    { key: "NO", node: "NO" },
+    { key: "POSISI", node: "POSISI" },
+    { key: "DESKRIPSI", node: "DESKRIPSI" },
+    { key: "KUOTA", node: "KUOTA" },
+    { key: "TANGGAL PENUTUPAN", node: (<><span className="block">TANGGAL</span><span className="block">PENUTUPAN</span></>) },
+    { key: "PERIODE MULAI MAGANG", node: (<><span className="block">PERIODE MULAI</span><span className="block">MAGANG</span></>) },
+    { key: "PERIODE SELESAI MAGANG", node: (<><span className="block">PERIODE SELESAI</span><span className="block">MAGANG</span></>) },
+    { key: "LOKASI PENEMPATAN", node: "LOKASI PENEMPATAN" },
+    { key: "TUGAS & TANGGUNG JAWAB", node: (<><span className="block">TUGAS &amp; TANGGUNG</span><span className="block">JAWAB</span></>) },
+    { key: "PERSYARATAN", node: "PERSYARATAN" },
+    { key: "KEUNTUNGAN", node: "KEUNTUNGAN" },
+    { key: "STATUS", node: "STATUS" },
+    { key: "AKSI", node: "AKSI" },
+  ];
 
-  const handleAktifkan = (index: number) => {
-    if (role === "perusahaan") {
-      const updated = [...(data as LowonganPerusahaan[])];
-      updated[startIndex + index].status = "Aktif";
-      setData(updated as any);
-    }
-  };
-
-  const handleNonaktifkan = (index: number) => {
-    if (role === "perusahaan") {
-      const updated = [...(data as LowonganPerusahaan[])];
-      updated[startIndex + index].status = "Tidak";
-      setData(updated as any);
-    }
+  // setelah user submit form, update baris + tampilkan success
+  const applyAktifkan = (id: number, payload: AktifkanPayload) => {
+    setRows(prev =>
+      prev.map(r =>
+        r.id === id
+          ? {
+              ...r,
+              status: "Aktif" as StatusLowongan,
+              mulaiMagang: payload.mulaiMagang,
+              selesaiMagang: payload.selesaiMagang,
+              deadline_lamaran: payload.deadline_lamaran,
+            }
+          : r
+      )
+    );
+    setSuccess({ open: true, msg: "Informasi Pengaktifan lowongan berhasil diunggah!" });
   };
 
   return (
-    <div>
-      <div className="overflow-auto rounded-xl border border-gray-200">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-[#0F67B1] text-white text-center text-xs font-bold">
-              <th className="px-4 py-3">NO</th>
-              {role === "perusahaan" ? (
-                <>
-                  <th className="px-4 py-3">POSISI</th>
-                  <th className="px-4 py-3">DESKRIPSI</th>
-                  <th className="px-4 py-3">KUOTA</th>
-                  <th className="px-4 py-3">CAPAIAN PEMBELAJARAN</th>
-                  <th className="px-4 py-3">STATUS</th>
-                  <th className="px-4 py-3">AKSI STATUS</th>
-                </>
-              ) : (
-                <>
-                  <th className="px-4 py-3">NAMA PELATIHAN</th>
-                  <th className="px-4 py-3">DESKRIPSI</th>
-                  <th className="px-4 py-3">KATEGORI</th>
-                  <th className="px-4 py-3">CAPAIAN PEMBELAJARAN</th>
-                  <th className="px-4 py-3">BATCH</th>
-                </>
-              )}
-              <th className="px-4 py-3">DETAIL</th>
-              <th className="px-4 py-3">AKSI</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentData.map((item: any, index: number) => (
-              <tr
-                key={item.id}
-                className="hover:bg-gray-50 text-xs text-center"
-              >
-                <td className="px-4 py-2 border-t">{startIndex + index + 1}</td>
-
-                {role === "perusahaan" ? (
-                  <>
-                    <td className="px-4 py-2 border-t text-left">
-                      {item.posisi}
-                    </td>
-                    <td className="px-4 py-2 border-t text-left">
-                      {item.deskripsi}
-                    </td>
-                    <td className="px-4 py-2 border-t">{item.kuota}</td>
-                    <td className="px-4 py-2 border-t text-left">
-                      {item.capaian}
-                    </td>
-                    <td className="px-4 py-2 border-t">
-                      <span
-                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full whitespace-nowrap ${
-                          item.status === "Aktif"
-                            ? "bg-green-200 text-green-800"
-                            : "bg-red-200 text-red-800"
-                        }`}
-                      >
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            item.status === "Aktif"
-                              ? "bg-green-800 text-green-800"
-                              : "bg-red-800 text-red-800"
-                          }`}
-                        ></span>
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 border-t text-center">
-                      {item.status === "Aktif" ? (
-                        <button
-                          onClick={() => {
-                            setSelectedIndex(index);
-                            setActionType("Nonaktifkan");
-                            setShowConfirm(true);
-                          }}
-                          className="px-2 py-1 rounded-[5px] bg-red-700 text-white hover:bg-red-800 transition"
-                        >
-                          Nonaktifkan
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setSelectedIndex(index);
-                            setActionType("Aktifkan");
-                            setShowConfirm(true);
-                          }}
-                          className="px-2 py-1 rounded-[5px] bg-green-600 text-white hover:bg-green-700 transition"
-                        >
-                          Aktifkan
-                        </button>
-                      )}
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="px-4 py-2 border-t text-left">
-                      {item.namaPelatihan}
-                    </td>
-                    <td className="px-4 py-2 border-t text-left">
-                      {item.deskripsi}
-                    </td>
-                    <td className="px-4 py-2 border-t">{item.kategori}</td>
-                    <td className="px-4 py-2 border-t text-left">
-                      {item.capaian}
-                    </td>
-                    <td className="px-4 py-2 border-t">
-                      <button
-                        onClick={() => setShowTambahBranch(true)}
-                        className="px-2 py-1 rounded-[5px] bg-[#0F67B1] text-white hover:bg-[#0c599b] transition"
-                      >
-                        + Tambah Batch
-                      </button>
-                    </td>
-                  </>
-                )}
-
-                {/* Detail & Aksi umum */}
-                <td className="px-4 py-2 border-t">
-                  <button className="px-3 py-1 rounded-full bg-[#0F67B1] text-white hover:bg-[#0c599b] transition">
-                    Detail
-                  </button>
-                </td>
-                <td className="px-4 py-2 border-t flex justify-center">
-                  <button className="flex items-center text-[#0F67B1] shadow-none border-none">
-                    <FaRegEdit />
-                  </button>
-                </td>
+    <div className="rounded-xl">
+      <div className="-mx-6 overflow-x-auto">
+        <div className="min-w-[2300px] px-6">
+          <table className="w-full text-xs">
+            <thead className="bg-[#0F67B1] text-white">
+              <tr>
+                {headerCells.map((h, i, arr) => (
+                  <th
+                    key={h.key}
+                    className={[
+                      "px-3 py-1.5",
+                      "text-xs leading-tight",
+                      "font-semibold text-center align-middle",
+                      i === 0 ? "rounded-tl-lg" : "",
+                      i === arr.length - 1 ? "rounded-tr-lg" : "",
+                    ].join(" ")}
+                  >
+                    {h.node}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                // Loading skeleton rows
+                Array.from({ length: 5 }).map((_, rowIdx) => (
+                  <tr key={`skeleton-${rowIdx}`} className="border-t border-gray-100 bg-white">
+                    {headerCells.map((h, colIdx) => (
+                      <td key={`${h.key}-${colIdx}`} className="px-3 py-2">
+                        <div
+                          className={[
+                            "animate-pulse rounded",
+                            colIdx === 11 ? "h-5" : "h-4",
+                            // vary widths a bit for nicer look
+                            colIdx === 0 ? "w-8" :
+                            colIdx === 1 ? "w-40" :
+                            colIdx === 2 ? "w-64" :
+                            colIdx === 3 ? "w-12" :
+                            colIdx === 4 || colIdx === 5 || colIdx === 6 ? "w-32" :
+                            colIdx === 7 ? "w-48" :
+                            colIdx === 8 || colIdx === 9 || colIdx === 10 ? "w-64" :
+                            colIdx === 12 ? "w-28" :
+                            "w-full",
+                            "bg-gray-200"
+                          ].join(" ")}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : error ? (
+                <tr><td colSpan={13} className="px-4 py-10 text-center bg-white text-red-600">{error}</td></tr>
+              ) : current.length === 0 ? (
+                <tr><td colSpan={13} className="px-4 py-10 text-center text-gray-500 bg-white">Belum ada lowongan terpasang.</td></tr>
+              ) : (
+                current.map((item, idx) => {
+                  const showAktifkan = item.status !== "Aktif"; // PRODUKSI: hanya saat Nonaktif
+
+                  return (
+                    <tr key={item.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-3 py-2 text-center whitespace-nowrap">{startIndex + idx + 1}</td>
+                      <td className="px-3 py-2"><span className="font-medium">{item.posisi}</span></td>
+                      <td className="px-3 py-2 max-w-[360px]"><p className="truncate text-xs">{item.deskripsi}</p></td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">{dash(item.kuota)}</td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">{dash(item.deadline_lamaran)}</td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">{dash(item.mulaiMagang)}</td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">{dash(item.selesaiMagang)}</td>
+                      <td className="px-3 py-2">{dash(item.lokasi_penempatan)}</td>
+                      <td className="px-3 py-2 max-w-[320px]"><p className="truncate text-xs">{summarize(item.tugas)}</p></td>
+                      <td className="px-3 py-2 max-w-[320px]"><p className="truncate text-xs">{summarize(item.persyaratan)}</p></td>
+                      <td className="px-3 py-2 max-w-[320px]"><p className="truncate text-xs">{summarize(item.keuntungan)}</p></td>
+
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-block px-2 py-1 rounded text-[11px] font-semibold ${
+                          item.status === "Aktif" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"
+                        }`}>
+                          {item.status}
+                        </span>
+                      </td>
+
+                      <td className="px-3 py-2">
+                        <div className="flex justify-center items-center gap-3">
+                          {showAktifkan && (
+                            <button
+                              onClick={() => setConfirm({ open: true, id: item.id })}
+                              className="inline-flex h-8 px-3 items-center rounded-[5px] bg-[#28A745] text-white text-xs font-semibold hover:brightness-95"
+                              title="Aktifkan"
+                            >
+                              Aktifkan
+                            </button>
+                          )}
+
+                          <Link
+                            href={`/upload-lowongan/detail/${item.id}`}
+                            className="inline-flex h-8 px-3 items-center rounded-[5px] bg-[#0F67B1] text-white text-xs font-medium hover:bg-[#0c599b] transition"
+                          >
+                            Detail
+                          </Link>
+
+                          <Link
+                            aria-label="Edit"
+                            href={`/upload-lowongan/edit/terpasang/${item.id}`}
+                            className="text-[#0F67B1] hover:opacity-80"
+                            title="Edit"
+                          >
+                            <BiEdit size={18} />
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Pagination */}
-      <div className="py-2 px-3 flex items-center gap-4 mt-2 text-xs rounded-b-xl justify-end">
-        <div className="flex items-center gap-2">
-          <span>Rows per page:</span>
-          <select
-            value={rowsPerPage}
-            onChange={(e) => {
-              setRowsPerPage(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="text-xs border border-gray-300 rounded px-2 py-1 text-gray-700"
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-          </select>
-        </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        perPage={perPage}
+        onPerPageChange={(n) => { setPerPage(n); setPage(1); }}
+        perPageOptions={[5, 10, 20]}
+      />
 
-        <div className="flex items-center gap-2">
-          <span>
-            {startIndex + 1}-{Math.min(startIndex + rowsPerPage, data.length)}{" "}
-            of {data.length}
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={handlePrev}
-              disabled={currentPage === 1}
-              className={`px-2 py-1 rounded bg-white ${
-                currentPage === 1
-                  ? "text-gray-300 cursor-not-allowed"
-                  : "text-gray-800 hover:bg-gray-200"
-              }`}
-            >
-              &lt;
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={currentPage === totalPages}
-              className={`px-2 py-1 rounded bg-white ${
-                currentPage === totalPages
-                  ? "text-gray-300 cursor-not-allowed"
-                  : "text-gray-800 hover:bg-gray-200"
-              }`}
-            >
-              &gt;
-            </button>
-          </div>
-        </div>
-        {role === "perusahaan" && (
-          <>
-            <ConfirmModal
-              open={showConfirm}
-              onClose={() => setShowConfirm(false)}
-              message={
-                actionType === "Nonaktifkan"
-                  ? "Apakah Anda yakin ingin menonaktifkan lowongan ini?"
-                  : "Apakah Anda yakin ingin mengaktifkan lowongan ini?"
-              }
-              onConfirm={() => {
-                if (selectedIndex !== null) {
-                  if (actionType === "Nonaktifkan") {
-                    handleNonaktifkan(selectedIndex);
-                    setSuccessMessage("Lowongan berhasil dinonaktifkan!");
-                    setShowSuccess(true);
-                  } else if (actionType === "Aktifkan") {
-                    setShowFormAktifkan(true);
-                  }
-                }
-                setShowConfirm(false);
-              }}
-            />
+      {/* 1) KONFIRMASI */}
+      <ConfirmModal
+        open={confirm.open}
+        onClose={() => setConfirm({ open: false })}
+        message="Apakah Anda Yakin Ingin Mengaktifkan Lowongan ?"
+        onConfirm={() => {
+          if (confirm.id != null) {
+            setConfirm({ open: false });
+            setForm({ open: true, id: confirm.id });
+          } else {
+            setConfirm({ open: false });
+          }
+        }}
+      />
 
-            <SuccessModal
-              open={showSuccess}
-              title="Berhasil"
-              message={successMessage}
-              onClose={() => setShowSuccess(false)}
-            />
+      {/* 2) FORM AKTIFKAN */}
+      <FormAktifkanModal
+        open={form.open}
+        onClose={() => setForm({ open: false })}
+        initial={
+          (() => {
+            const row = rows.find(r => r.id === form.id);
+            return row ? {
+              mulaiMagang: row.mulaiMagang ?? "",
+              selesaiMagang: row.selesaiMagang ?? "",
+              deadline_lamaran: row.deadline_lamaran ?? "",
+            } : undefined;
+          })()
+        }
+        onSubmit={async (payload) => {
+          try {
+            if (form.id != null) {
+              const row = rows.find(r => r.id === form.id);
+              if (!row) throw new Error('Data lowongan tidak ditemukan.');
 
-            <FormAktifkanModal
-              open={showFormAktifkan}
-              onClose={() => setShowFormAktifkan(false)}
-              onSubmit={(formData) => {
-                if (selectedIndex !== null) {
-                  handleAktifkan(selectedIndex);
-                }
-                setShowFormAktifkan(false);
-              }}
-            />
-          </>
-        )}
-        {role === "lpk" && (
-          <TambahBranch
-            open={showTambahBranch}
-            onClose={() => setShowTambahBranch(false)}
-            onSubmit={(data) => {
-              console.log("Data batch baru:", data);
-              setShowTambahBranch(false);
-            }}
-          />
-        )}
-      </div>
+              // Bangun payload lengkap agar tanggal tersimpan pasti di backend
+              const fullPayload: CreateLowonganPayload = {
+                perusahaan_id: row.perusahaan_id,
+                judul_lowongan: row.judul_lowongan,
+                posisi: row.posisi,
+                deskripsi: row.deskripsi,
+                kuota: row.kuota,
+                lokasi_penempatan: row.lokasi_penempatan,
+                deadline_lamaran: payload.deadline_lamaran || row.deadline_lamaran,
+                mulaiMagang: payload.mulaiMagang || row.mulaiMagang || undefined,
+                selesaiMagang: payload.selesaiMagang || row.selesaiMagang || undefined,
+                tugas: Array.isArray(row.tugas) ? row.tugas : [],
+                persyaratan: Array.isArray(row.persyaratan) ? row.persyaratan : [],
+                keuntungan: Array.isArray(row.keuntungan) ? row.keuntungan : [],
+              };
+
+              await updateLowonganTerpasang(form.id, fullPayload);
+              applyAktifkan(form.id, payload as AktifkanPayload);
+              setForm({ open: false });
+            }
+          } catch (e: any) {
+            setError(e?.response?.data?.message || 'Gagal mengaktifkan lowongan');
+          }
+        }}
+      />
+
+      {/* 3) POPUP BERHASIL */}
+      <SuccessModal
+        open={success.open}
+        title="Berhasil"
+        message={success.msg}
+        onClose={() => setSuccess({ open: false, msg: "" })}
+      />
     </div>
   );
 }

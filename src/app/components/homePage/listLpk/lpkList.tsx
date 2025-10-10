@@ -9,6 +9,60 @@ import LpkCard from "./lpkCard";
 import { useResponsivePerPage, PER_PAGE } from "@/app/components/homePage/pageResponsive";
 import { TampilAlllpk } from "@/lib/api-lpk";
 import type { Lpk } from "@/types/lpk";
+import { LpkCardSkeleton } from "@/app/components/homePage/lpkCardSkeleton";
+
+// Reuse similar timestamp for cache busting; new mounts can reuse Date.now()
+const CACHE_STAMP = Date.now();
+
+// Utility mirip dengan di carousel tapi dipersempit: prioritaskan storage/ versi karena itu yang 200
+function buildLogoCandidates(raw: any): string[] {
+  if (!raw) return [];
+  let val = raw.logoRaw || raw.logo_lembaga || raw.logo_url || raw.logoUrl || raw.logo || null;
+  if (!val) return [];
+  val = String(val).trim();
+  const base = (process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+  const out: string[] = [];
+  const push = (u: string) => { if (u && !out.includes(u)) out.push(u); };
+  const withCache = (u: string) => /[?&](v|cb|t)=/i.test(u) ? u : `${u}${u.includes('?') ? '&' : '?'}v=${CACHE_STAMP}`;
+
+  if (/^https?:\/\//i.test(val)) {
+    if (/\/lpk\/logo\//i.test(val) && !/\/storage\/lpk\/logo\//i.test(val)) {
+      const alt = val.replace(/\/lpk\/logo\//i, '/storage/lpk/logo/');
+      push(withCache(alt));
+      push(withCache(val));
+      const fileName = val.split('/').pop() || '';
+      push(withCache(`${base}/storage/logos/${fileName}`));
+      push(withCache(`${base}/logos/${fileName}`));
+    } else {
+      push(withCache(val));
+    }
+    return out;
+  }
+
+  let rel = val.replace(/^\//,'');
+  if (/^lpk\/logo\//i.test(rel)) {
+    push(withCache(`${base}/storage/${rel}`));
+    push(withCache(`${base}/storage/lpk/logo/${rel.replace(/^lpk\/logo\//i,'')}`));
+    push(withCache(`${base}/${rel}`));
+    const fileName = rel.split('/').pop() || '';
+    push(withCache(`${base}/storage/logos/${fileName}`));
+    push(withCache(`${base}/logos/${fileName}`));
+    return out;
+  }
+  if (/^storage\/lpk\/logo\//i.test(rel)) {
+    push(withCache(`${base}/${rel}`));
+    return out;
+  }
+  if (/^logos\//i.test(rel)) {
+    push(withCache(`${base}/${rel}`));
+    push(withCache(`${base}/storage/${rel}`));
+  } else {
+    push(withCache(`${base}/storage/logos/${rel}`));
+  }
+  if (!/^storage\//i.test(rel)) push(withCache(`${base}/storage/${rel}`));
+  push(withCache(`${base}/${rel}`));
+  return out;
+}
 
 export default function LpkList() {
   const [data, setData] = useState<Lpk[]>([]);
@@ -41,16 +95,33 @@ export default function LpkList() {
           return /^https?:\/\//i.test(t) ? t : `https://${t}`;
         };
 
-        const mapped: Lpk[] = rows.map((r: any) => ({
-          id: r.id,
-          name: r.nama_lembaga ?? "LPK",
-          address: r.alamat ?? "-",
-          website: normalizeUrl(r.web_lembaga ?? null),
-          logoUrl: r.logo_lembaga ?? r.logo_url ?? "/assets/img/placeholder-logo.png",
-          // belum ada di API → placeholder; kalau nanti ada r.cover_url tinggal ganti
-          coverUrl: r.cover_url ?? "/assets/img/placeholder-cover.jpg",
-          slug: r.slug,
-        }));
+        const mapped: Lpk[] = rows.map((r: any) => {
+          const web = normalizeUrl(r.web_lembaga ?? null);
+          const candidates = buildLogoCandidates(r);
+          const primary = candidates[0] || '/assets/img/placeholder-logo.svg';
+          // Cover handling seperti sebelumnya
+          let cover = r.cover_url ?? '/assets/img/placeholder-cover.svg';
+          if (cover && !/^https?:\/\//i.test(cover)) {
+            if (!cover.startsWith('/')) cover = '/' + cover;
+            if (/^\/(logos|storage|covers)\//.test(cover)) {
+              const base = (process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000').replace(/\/$/, '');
+              cover = base + cover;
+            }
+          }
+          return {
+            id: r.id,
+            name: r.nama_lembaga ?? 'LPK',
+            address: r.alamat ?? '-',
+            web_lembaga: web,
+            logoUrl: primary,
+            coverUrl: cover,
+            bidang_pelatihan: r.bidang_pelatihan ?? null,
+            deskripsi_lembaga: r.deskripsi_lembaga ?? null,
+            slug: r.slug,
+            email: r.email ?? undefined,
+            _logoCandidates: candidates,
+          } as Lpk & { _logoCandidates?: string[] };
+        });
 
         setData(mapped);
         setErr(null);
@@ -120,10 +191,7 @@ export default function LpkList() {
         {loading && (
           <div className="grid gap-5 grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3">
             {Array.from({ length: itemsPerPage }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[260px] rounded-[8px] border border-[#D6DDEB] bg-gray-100 animate-pulse"
-              />
+              <LpkCardSkeleton key={i} />
             ))}
           </div>
         )}

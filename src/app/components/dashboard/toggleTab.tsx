@@ -77,7 +77,7 @@ const ToggleTabs = <T extends string = string>({
                 "px-4 py-2 rounded-[5px] text-sm transition-colors shadow-none",
                 isActive
                   ? "bg-[rgba(15,103,177,0.05)] text-[#0F67B1] font-medium"
-                  : "bg-[#F1F2F3] text-[#646161] hover:text-gray-700",
+                  : "bg-[#F1F2F3] text-[#646161] hover:text-gray-700 font-medium",
               ].join(" ")}
             >
               {t.text}
@@ -85,7 +85,7 @@ const ToggleTabs = <T extends string = string>({
           );
         })}
         <div
-          className="pointer-events-none absolute -bottom-[1px] h-[3px] bg-blue-600 rounded-full transition-all duration-200"
+          className="pointer-events-none absolute -bottom-[1px] h-[3px] bg-[#0F67B1] rounded-full transition-all duration-200"
           style={{ left: indicator.left, width: indicator.width }}
         />
       </div>

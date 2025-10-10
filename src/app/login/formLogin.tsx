@@ -8,6 +8,7 @@ import Button from "@/app/components/registrasi/button";
 import InputPassword from "@/app/components/registrasi/InputPassword";
 import { login } from "@/lib/api-auth";
 import { Login } from "@/types/user";
+import { useAuth } from "@/app/components/auth/AuthProvider";
 
 type Role = "siswa" | "sekolah" | "perusahaan" | "lpk" | "admin";
 
@@ -31,26 +32,44 @@ export default function FormLoginMultiRole({
 
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { setToken: setSessionToken } = useAuth();
 
   function redirectByRole(role: Role) {
-    switch (role) {
-      case "admin":
-        return router.push("/dashboard-admin");
-      case "siswa":
-        return router.push("/dashboard-siswa");
-      case "sekolah":
-        return router.push("/dashboard-sekolah");
-      case "perusahaan":
-        return router.push("/dashboard-perusahaan");
-      case "lpk":
-        return router.push("/dashboard-lpk");
-      default:
-        return router.push("/");
+    if (role === "admin") return router.push("/dashboard-admin");
+    return router.push("/");
+  }
+
+  // --- helper: ambil ID sesuai role tanpa ubah alur login ---
+  function getActorId(user: any, role: Role): number | string | null {
+    if (!user) return null;
+
+    const candidatesByRole: Record<Role, string[]> = {
+      siswa: ["siswa_id", "id", "user_id"],
+      sekolah: ["sekolah_id", "id", "user_id"],
+      perusahaan: ["perusahaan_id", "company_id", "id", "user_id"],
+      lpk: ["lpk_id", "lembaga_id", "id", "user_id"],
+      admin: ["admin_id", "id", "user_id"],
+    };
+
+    const keys = candidatesByRole[role] ?? ["id"];
+    for (const k of keys) {
+      const v = (user as any)?.[k];
+      if (typeof v === "number" || typeof v === "string") return v;
     }
+
+    // fallback nested: user.perusahaan.id / user.sekolah.id / dst.
+    const nested = (user as any)?.[role];
+    if (
+      nested &&
+      (typeof nested.id === "number" || typeof nested.id === "string")
+    ) {
+      return nested.id;
+    }
+
+    return null;
   }
 
   const onSubmit = async (data: FormValues) => {
-    // jika fixedRole ada → pakai itu; kalau tidak → pakai dari select
     const hintedRole: Role = (fixedRole ?? data.role) as Role;
 
     const payload: Login = {
@@ -62,13 +81,40 @@ export default function FormLoginMultiRole({
     try {
       setLoading(true);
       const res = await login(payload);
-      const serverRole: Role = res?.data?.role ?? hintedRole;
+
+      const token = res?.data?.token;
+      const user = res?.data?.user;
+      const serverRole: Role = (res?.data?.role ?? hintedRole) as Role;
+
+      if (token && user && serverRole) {
+        const actorId = getActorId(user, serverRole);
+        // simpan token & user seperti biasa
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("role", serverRole);
+        try { localStorage.setItem("login_at", String(Date.now())); } catch {}
+        localStorage.setItem(
+          "actor",
+          JSON.stringify({ role: serverRole, id: actorId })
+        );
+        localStorage.setItem(`access_token_${serverRole}`, token);
+        if (actorId != null) localStorage.setItem(`id_${serverRole}`, String(actorId));
+        // Set context session cookie+timeout (1 jam)
+        setSessionToken(token, 60*60*1000);
+      }
 
       redirectByRole(serverRole);
       reset();
     } catch (err: any) {
-      console.error("Login gagal:", err.response?.data || err.message);
-      alert("Login gagal. Periksa kembali username, password, dan role Anda.");
+      console.error("Login gagal:", err?.response?.data || err?.message || err);
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      // If account not verified, show admin-verification message
+      if (status === 403 && data && data.message && data.message.includes("diverifikasi")) {
+        alert("Akun Anda belum diverifikasi. Silakan tunggu verifikasi oleh admin atau hubungi pihak sekolah/administrasi.");
+      } else {
+        alert("Login gagal. Periksa kembali username, password, dan role Anda.");
+      }
     } finally {
       setLoading(false);
     }

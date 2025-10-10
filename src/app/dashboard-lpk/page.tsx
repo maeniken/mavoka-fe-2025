@@ -13,11 +13,6 @@ export default function DashboardLpk() {
   return (
     <DashboardLayout2
       role="lpk"
-      user={{
-        fullName: "Fitacademy x Fitinline",
-        orgName: "Fitacademy",
-        profilePic: "",
-      }}
     >
       {/* Grid pindah ke page */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

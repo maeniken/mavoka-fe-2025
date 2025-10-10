@@ -71,3 +71,68 @@ export interface ApiErrorResponse {
   message?: string;
   errors?: ApiErrorBag;
 }
+
+//data-siswa
+export interface SiswaRecord extends UploadSiswaSinglePayload {
+  id: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+
+  // Optional flags untuk logika "status akun"
+  registered_at?: string | null;
+  last_login_at?: string | null;
+}
+
+/** ---- Status Akun (UI) ---- */
+export type StatusAkun = "Aktif" | "Tidak";
+
+/** ---- Row untuk tabel daftar siswa (UI list page) ---- */
+export interface StudentRow {
+  id: number;
+  nama: string;
+  jurusan: string;
+  tahunAjaran: string;
+  statusAkun: StatusAkun;
+}
+
+/** ---- Status lamaran (detail) :
+ * selaraskan dengan dashboard siswa.
+ * Sediakan alias 'Wawancara' ↔ 'Interview' agar fleksibel di data.
+ */
+export type ApplicationStatus =
+  | "Lamar"
+  | "Interview"
+  | "Wawancara"
+  | "Penawaran"
+  | "Diterima"
+  | "Ditolak";
+
+/** ---- Item tabel detail siswa (riwayat pengajuan magang) ---- */
+export interface StudentApplicationDetail {
+  id: number;                 // id lamaran
+  namaSiswa: string;
+  jurusan: string;
+  tahunAjaran: string;
+  perusahaan: string;
+  divisiPenempatan: string;
+  status: ApplicationStatus;
+}
+
+/** ================= Helpers (mapping & logic) ================= */
+
+/** Tentukan 'Aktif' bila siswa sudah registrasi / pernah login / sudah terverifikasi */
+export const deriveStatusAkun = (s: SiswaRecord): StatusAkun => {
+  const verified = s.status_verifikasi === "sudah";
+  const registered = Boolean(s.registered_at);
+  const loggedIn = Boolean(s.last_login_at);
+  return verified || registered || loggedIn ? "Aktif" : "Tidak";
+};
+
+/** Mapper dari SiswaRecord → StudentRow (untuk tabel list) */
+export const mapSiswaToRow = (s: SiswaRecord): StudentRow => ({
+  id: s.id,
+  nama: s.nama_lengkap,
+  jurusan: s.nama_jurusan,
+  tahunAjaran: s.tahun_ajaran,
+  statusAkun: deriveStatusAkun(s),
+});

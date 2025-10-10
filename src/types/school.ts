@@ -9,10 +9,11 @@ export type School = {
   name: string;
   address: string;
   type?: string | null;
-  web_sekolah?: string | null;
+  website?: string | null;  // konsisten pakai 'website'
   email?: string | null;
   npsn?: string | null;
-  logoUrl?: string | null;
+  logoUrl?: string | null;  // URL absolut (dari accessor backend logo_url)
+  logo_sekolah?: string | null; // path relatif mentah (opsional bila backend ikut kirim)
   slug?: string;
   jurusan?: Jurusan[];
 };

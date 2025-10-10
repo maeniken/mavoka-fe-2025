@@ -34,22 +34,73 @@ export async function getSchoolById(id: string | number): Promise<School | null>
     const r = extractSchoolPayload(res) as SchoolRaw | undefined;
     if (!r) return null;
 
+    const logoAbsolute = r.logo_url
+      ? r.logo_url
+      : r.logo_sekolah
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "")}/${r.logo_sekolah.replace(/^\//,'')}`
+        : null;
+
     const school: School = {
-  id: r.id ?? id,
-  name: r.nama_sekolah ?? "Sekolah",
-  address: r.alamat ?? "-",
-  type: r.jenis ?? null,
-  web_sekolah: r.web_sekolah ?? null,
-  email: r.email ?? null,
-  npsn: r.npsn ?? null,
-  logoUrl: r.logo_sekolah ?? r.logo_url ?? null,
-  slug: r.slug,
-  jurusan: r.jurusan ?? [],
-};
+      id: r.id ?? id,
+      name: r.nama_sekolah ?? "Sekolah",
+      address: r.alamat ?? "-",
+      type: r.jenis ?? null,
+      website: r.web_sekolah ?? null,
+      email: r.email ?? null,
+      npsn: r.npsn ?? null,
+      logoUrl: logoAbsolute,
+      slug: r.slug,
+      jurusan: r.jurusan ?? [],
+    };
 
     return school;
   } catch (err) {
     console.error("getSchoolById error:", err);
     return null;
+  }
+}
+
+// Ambil jurusan (array string / array nama) dari endpoint /api/sekolah/jurusan/{id}
+// Backend mengembalikan bentuk: { sekolah_id, nama_sekolah, jurusan: ["RPL","TKJ"], count }
+// Kita normalisasi menjadi Jurusan[] dengan id incremental lokal agar cocok dengan UI yang mengharapkan key id.
+export async function getJurusanBySekolah(id: string | number): Promise<Jurusan[]> {
+  try {
+    const res = await api.get(`/api/sekolah/jurusan/${id}`);
+    const data = res?.data;
+    if (!data) return [];
+    const list: string[] = Array.isArray(data.jurusan) ? data.jurusan : [];
+    return list.map((nama, idx) => ({ id: idx + 1, sekolah_id: Number(id), nama_jurusan: nama }));
+  } catch (err) {
+    console.error("getJurusanBySekolah error:", err);
+    return [];
+  }
+}
+
+// Ambil semua sekolah (ringkas) untuk marquee / listing logo
+export async function getAllSekolah(): Promise<Pick<School, 'id' | 'name' | 'logoUrl'>[]> {
+  try {
+    const res = await api.get('/api/sekolah/all-sekolah');
+    const payload = res?.data ?? res;
+    let arr: any[] = [];
+    if (Array.isArray(payload)) arr = payload;
+    else if (Array.isArray(payload.data)) arr = payload.data;
+    else if (Array.isArray(payload.data?.data)) arr = payload.data.data;
+
+    const base = (process.env.NEXT_PUBLIC_API_BASE ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+
+    return arr.map(item => {
+      let logo = item.logo_url || item.logo_sekolah || null;
+      if (logo && !/^https?:\/\//i.test(logo)) {
+        logo = base + '/' + String(logo).replace(/^\//,'');
+      }
+      return {
+        id: item.id,
+        name: item.nama_sekolah ?? 'Sekolah',
+        logoUrl: logo,
+      };
+    });
+  } catch (e) {
+    console.error('[getAllSekolah] error', e);
+    return [];
   }
 }
