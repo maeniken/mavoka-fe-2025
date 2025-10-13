@@ -8,6 +8,10 @@ type Props = {
   rowNumberOffset?: number;
   /** kalau sudah dibungkus card putih di parent, set true */
   noCardWrapper?: boolean;
+  /** tampilkan skeleton di tbody saat loading */
+  loading?: boolean;
+  /** jumlah baris skeleton */
+  skeletonCount?: number;
 };
 
 /* ---- Badge status dengan dot, warna konsisten ---- */
@@ -34,7 +38,13 @@ export default function StudentDetailTable({
   rows,
   rowNumberOffset = 0,
   noCardWrapper = false,
+  loading = false,
+  skeletonCount = 6,
 }: Props) {
+  const SkeletonBar = ({ w = "w-40" }: { w?: string }) => (
+    <div className={`h-3 rounded bg-gray-200/80 animate-pulse ${w}`} />
+  );
+
   const Table = (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse min-w-[860px]">
@@ -60,19 +70,33 @@ export default function StudentDetailTable({
         </thead>
 
         <tbody>
-          {rows.map((r, idx) => (
+          {loading && Array.from({ length: skeletonCount }).map((_, i) => (
+            <tr key={`sk-${i}`} className="border-b text-xs">
+              <td className="px-4 py-3 w-14 text-center">
+                <div className="mx-auto h-3 w-6 rounded bg-gray-200/80 animate-pulse" />
+              </td>
+              <td className="px-4 py-3 text-center"><SkeletonBar w="w-48" /></td>
+              <td className="px-4 py-3 text-center"><SkeletonBar w="w-40" /></td>
+              <td className="px-4 py-3 text-center"><SkeletonBar w="w-40" /></td>
+              <td className="px-4 py-3 text-center">
+                <div className="mx-auto h-6 w-20 rounded-full bg-gray-200/80 animate-pulse" />
+              </td>
+            </tr>
+          ))}
+
+          {!loading && rows.map((r, idx) => (
             <tr key={r.id} className="border-b hover:bg-gray-50 text-xs">
               <td className="px-4 py-3 w-14 text-center">{rowNumberOffset + idx + 1}</td>
-              <td className="px-4 py-3">{r.namaSiswa}</td>
-              <td className="px-4 py-3">{r.perusahaan}</td>
-              <td className="px-4 py-3">{r.divisiPenempatan}</td>
+              <td className="px-4 py-3 text-center">{r.namaSiswa}</td>
+              <td className="px-4 py-3 text-center">{r.perusahaan}</td>
+              <td className="px-4 py-3 text-center">{r.divisiPenempatan}</td>
               <td className="px-4 py-3 text-center">
                 <StatusBadge status={r.status} />
               </td>
             </tr>
           ))}
 
-          {rows.length === 0 && (
+          {!loading && rows.length === 0 && (
             <tr>
               <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
                 Tidak ada data.

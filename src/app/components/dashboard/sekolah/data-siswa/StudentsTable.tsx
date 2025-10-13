@@ -56,7 +56,7 @@ export default function StudentsTable({
               <td className="px-4 py-3 w-14 text-center">{rowNumberOffset + idx + 1}</td>
               <td className="px-4 py-3">{r.nama}</td>
               <td className="px-4 py-3">{r.jurusan}</td>
-              <td className="px-4 py-3">{r.tahunAjaran}</td>
+              <td className="px-4 py-3 text-center">{r.tahunAjaran}</td>
               <td className="px-4 py-3 text-center">
                 <AccountStatusChip status={r.statusAkun} />
               </td>

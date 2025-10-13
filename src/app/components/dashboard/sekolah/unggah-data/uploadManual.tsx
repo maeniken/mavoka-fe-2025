@@ -188,6 +188,7 @@
 import React, { useEffect, useState } from 'react';
 import SuccessModal from '@/app/components/registrasi/PopupBerhasil';
 import { uploadSiswaSingle } from '@/lib/api-unggah-data-siswa';
+import { getJurusanBySekolah } from '@/services/sekolah';
 
 type FormState = {
   nama: string;
@@ -217,6 +218,8 @@ const UploadManual: React.FC<Props> = ({ sekolahId }) => {
   const [sid, setSid] = useState<number | null>(sekolahId ?? null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [jurusanOptions, setJurusanOptions] = useState<string[]>([]);
+  const [loadingJurusan, setLoadingJurusan] = useState(false);
 
 function resolveSekolahId(): number | null {
   // 1) prop menang
@@ -264,9 +267,27 @@ useEffect(() => {
   if (found != null) setSid(found);
 }, [sid, sekolahId]);
 
+// efek: load daftar jurusan ketika sid sudah ada
+useEffect(() => {
+  if (sid == null) return;
+  (async () => {
+    try {
+      setLoadingJurusan(true);
+      const arr = await getJurusanBySekolah(sid);
+      const names = Array.isArray(arr) ? arr.map(j => j.nama_jurusan).filter(Boolean) : [];
+      setJurusanOptions(names);
+    } catch (e) {
+      console.warn('[unggah-manual] gagal memuat jurusan', e);
+      setJurusanOptions([]);
+    } finally {
+      setLoadingJurusan(false);
+    }
+  })();
+}, [sid]);
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+
+  const onChange: React.ChangeEventHandler<HTMLInputElement | HTMLSelectElement> = (e) => {
+    const { name, value } = e.currentTarget;
     setFormData((s) => ({ ...s, [name]: value }));
   };
 
@@ -398,15 +419,44 @@ const onSubmit = async (e: React.FormEvent) => {
           <label htmlFor="jurusan" className="block text-sm font-medium text-[#1C1C1C]">
             Jurusan
           </label>
-          <input
-            id="jurusan"
-            name="jurusan"
-            value={formData.jurusan}
-            onChange={onChange}
-            placeholder="Masukkan jurusan"
-            className={inputCls}
-            required
-          />
+          {loadingJurusan ? (
+            <select
+              id="jurusan"
+              name="jurusan"
+              value={formData.jurusan}
+              onChange={onChange}
+              className={inputCls}
+              disabled
+            >
+              <option value="">Memuat jurusan…</option>
+            </select>
+          ) : jurusanOptions.length > 0 ? (
+            <select
+              id="jurusan"
+              name="jurusan"
+              value={formData.jurusan}
+              onChange={onChange}
+              className={inputCls}
+              required
+            >
+              <option value="">Pilih jurusan</option>
+              {jurusanOptions.map((j) => (
+                <option key={j} value={j}>
+                  {j}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id="jurusan"
+              name="jurusan"
+              value={formData.jurusan}
+              onChange={onChange}
+              placeholder="Masukkan jurusan"
+              className={inputCls}
+              required
+            />
+          )}
           {errors.nama_jurusan && <p className="text-xs text-red-600 mt-1">{errors.nama_jurusan}</p>}
         </div>
 

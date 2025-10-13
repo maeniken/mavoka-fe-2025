@@ -36,7 +36,7 @@ export default function Pagination({
       <div className="flex items-center gap-2">
         <span className="text-black text-xs">Baris per halaman :</span>
         <select
-          className="h-9 border-none px-0 py-0 outline-none font-semibold text-black text-xs"
+          className="h-9 border-none px-0 py-0 outline-none font-semibold text-black text-xs text-center hover:cursor-pointer"
           value={perPage}
           onChange={(e) => onPerPageChange(Number(e.target.value))}
         >

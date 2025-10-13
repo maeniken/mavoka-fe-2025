@@ -1,11 +1,14 @@
 "use client";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import StudentsTable from "@/app/components/dashboard/sekolah/data-siswa/StudentsTable";
+import StudentsTableSkeleton from "@/app/components/dashboard/sekolah/data-siswa/StudentsTableSkeleton";
 import Pagination from "@/app/components/dashboard/Pagination";
 import FilterBar from "@/app/components/dashboard/sekolah/data-siswa/FilterBar";
 import DashboardLayout2 from "@/app/components/dashboard/DashboardLayout2";
-import { getStudentList } from "@/app/data/dummyStudents";
+import { fetchSiswaBySekolah } from "@/services/sekolah-students";
+import { getJurusanBySekolah } from "@/services/sekolah";
+import { resolveRoleId } from "@/lib/auth-storage";
 
 // 👉 Pisahkan konten yang pakai hook ke komponen Content, lalu bungkus dengan Suspense
 function DataSiswaContent() {
@@ -20,24 +23,53 @@ function DataSiswaContent() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
 
-  // options (dummy)
-  const jurusanOptions = ["Administrasi Perkantoran", "Desain Grafis"];
-  const tahunOptions = ["2024/2025", "2025/2026"];
+  // options from backend
+  const [jurusanOptions, setJurusanOptions] = useState<string[]>([]);
+  const [tahunOptions] = useState<string[]>(["2024/2025", "2025/2026"]); // TODO: fetch distinct from API if available
 
-  // data dummy shared
-  const allRows = getStudentList();
-
-  // filter
-  const filtered = allRows.filter((r) => {
-    const okJ = jurusan ? r.jurusan === jurusan : true;
-    const okT = tahun ? r.tahunAjaran === tahun : true;
-    const okS = status === "Semua" ? true : r.statusAkun === status;
-    return okJ && okT && okS;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  // server data
+  const [rows, setRows] = useState<any[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
   const start = (page - 1) * perPage;
-  const paged = useMemo(() => filtered.slice(start, start + perPage), [filtered, start, perPage]);
+
+  const sekolahId = resolveRoleId('sekolah');
+
+  useEffect(() => {
+    // fetch jurusan list for this school
+    (async () => {
+      try {
+        if (!sekolahId) return;
+        const j = await getJurusanBySekolah(sekolahId);
+        setJurusanOptions(Array.isArray(j) ? j.map(x => x.nama_jurusan) : []);
+      } catch (e) { console.warn('[data-siswa] jurusan fetch fail', e); }
+    })();
+  }, [sekolahId]);
+
+  useEffect(() => {
+    // fetch siswa based on filters/pagination
+    (async () => {
+      try {
+        setLoading(true);
+        const resp = await fetchSiswaBySekolah({
+          jurusan: jurusan || undefined,
+          tahun: tahun || undefined,
+          status,
+          page,
+          perPage,
+        });
+        setRows(resp.data ?? []);
+        const last = resp.pagination?.last_page ?? 1;
+        setTotalPages(Math.max(1, Number(last)));
+      } catch (e) {
+        console.error('[data-siswa] load fail', e);
+        setRows([]);
+        setTotalPages(1);
+      } finally { setLoading(false); }
+    })();
+  }, [jurusan, tahun, status, page, perPage]);
+
+  const paged = rows; // backend already paginated
 
   const resetToFirstPage = () => setPage(1);
 
@@ -59,12 +91,16 @@ function DataSiswaContent() {
         />
 
         <div className="mt-4">
-          <StudentsTable
-            rows={paged}
-            rowNumberOffset={start}
-            onDetail={(id) => router.push(`/dashboard-sekolah/data-siswa/${id}`)}
-            noCardWrapper
-          />
+          {loading ? (
+            <StudentsTableSkeleton />
+          ) : (
+            <StudentsTable
+              rows={paged}
+              rowNumberOffset={start}
+              onDetail={(id) => router.push(`/dashboard-sekolah/data-siswa/${id}`)}
+              noCardWrapper
+            />
+          )}
         </div>
 
         <Pagination
