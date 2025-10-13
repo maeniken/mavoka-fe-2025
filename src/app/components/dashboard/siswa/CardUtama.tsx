@@ -1,17 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import StudentApplicationsTable from "@/app/components/dashboard/siswa/pengajuan-magang/table";
 
-interface AnyUser { [k:string]: any }
+interface AnyUser { [k: string]: any }
 
 function deriveNama(user: AnyUser | null): string {
   if (!user) return "Siswa";
-  return (
-    user.nama_lengkap ||
-    user.name ||
-    user.username ||
-    "Siswa"
-  );
+  return user.nama_lengkap || user.name || user.username || "Siswa";
 }
 
 export default function CardUtama() {
@@ -20,13 +16,8 @@ export default function CardUtama() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem("user");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setNama(deriveNama(parsed));
-      }
-    } catch (e) {
-      // ignore parse errors
-    }
+      if (raw) setNama(deriveNama(JSON.parse(raw)));
+    } catch {}
   }, []);
 
   return (
@@ -35,16 +26,17 @@ export default function CardUtama() {
         <h1 className="font-bold text-[#0F67B1]">
           SELAMAT DATANG <span className="text-black">{nama}</span>
         </h1>
-        <p className="text-[#A3A3A3] mt-1">
-          Hi, {nama}. Selamat datang kembali di MAVOKA!
-        </p>
+        <p className="text-[#A3A3A3] mt-1">Hi, {nama}. Selamat datang kembali di MAVOKA!</p>
         <p className="mt-10 font-semibold">
-          Selamat datang di dashboard siswa. Silahkan gunakan fitur di samping
-          untuk keperluan Anda.
+          Selamat datang di dashboard siswa. Silahkan gunakan fitur di samping untuk keperluan Anda.
         </p>
         <p className="font-semibold">Let's Start Your Career Here!</p>
+
+        {/* TABLE PENGAJUAN – tanpa kolom Aksi */}
+        <div className="w-full mt-8">
+          <StudentApplicationsTable showActions={false} maxRows={5} />
+        </div>
       </div>
     </div>
   );
 }
-

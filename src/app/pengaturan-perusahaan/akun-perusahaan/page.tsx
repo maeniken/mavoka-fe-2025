@@ -111,7 +111,7 @@ export default function AkunPage() {
   // Show loading spinner while fetching data
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow">
+      <div className="bg-white p-6 rounded-lg ">
         <AkunHeader />
         <div className="flex justify-center items-center min-h-[300px]">
           <LoadingSpinner 
@@ -119,6 +119,7 @@ export default function AkunPage() {
             label="Memuat data akun..." 
             labelPosition="below"
             variant="primary"
+            styleType="dashed"
           />
         </div>
       </div>
@@ -127,28 +128,34 @@ export default function AkunPage() {
 
   return (
     <>
-      {activeTab === "akun" && (
-        <>
-          <AkunHeader />
-          {!isEditing && (
-            <AkunView
-              form={form}
-              setForm={setForm}
-              onChangePassword={() => setIsEditing(true)}
-              onShowToast={showToast}
-              userId={userId}
-              role="perusahaan"
-            />
-          )}
-          {isEditing && (
-            <ChangePasswordFlow role="perusahaan" onCancel={() => setIsEditing(false)} />
-          )}
-        </>
-      )}
-      
+      <div className="bg-white p-6 rounded-lg">
+        <AkunHeader />
+
+        {activeTab === "akun" && (
+          <>
+            {!isEditing ? (
+              <AkunView
+                form={form}
+                setForm={setForm}
+                onChangePassword={() => setIsEditing(true)}
+                onShowToast={showToast}
+                userId={userId}
+                role="perusahaan"
+              />
+            ) : (
+              <ChangePasswordFlow role="perusahaan" onCancel={() => setIsEditing(false)} />
+            )}
+          </>
+        )}
+      </div>
+
       {toast && (
         <div className="fixed top-4 right-4 z-50">
-          <div className={`px-4 py-2 rounded shadow-md text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          <div
+            className={`px-4 py-2 rounded shadow-md text-white ${
+              toast.type === "success" ? "bg-green-600" : "bg-red-600"
+            }`}
+          >
             {toast.message}
           </div>
         </div>
