@@ -92,10 +92,7 @@
 
 "use client";
 import { useMemo, useState } from "react";
-import { HiOutlinePencilAlt } from "react-icons/hi";
 import { IoIosArrowForward } from "react-icons/io";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import SuccessModal from "@/app/components/registrasi/PopupBerhasil";
 import { LoadingSpinner } from "@/app/components/ui/LoadingSpinner";
 import { updateAccount, getAccount } from "@/services/account";
@@ -117,15 +114,10 @@ export default function AkunView({
   userId,
   role = "lpk",
 }: AkunViewProps) {
-  // show/hide password bullets (plaintext tidak pernah ada dari server)
-  const [showPassword, setShowPassword] = useState(false);
-  const masked = "••••••••";
-  const displayPassword =
-    showPassword && typeof form?.password === "string" && form.password.length > 0
-      ? form.password
-      : masked;
+  // password selalu disembunyikan (tanpa toggle)
+  const maskedPassword = "••••••••";
 
-  // inline editing state for username
+  // inline editing state (username)
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string>(form.username || "");
   const [saving, setSaving] = useState(false);
@@ -133,7 +125,9 @@ export default function AkunView({
 
   // fallback role & id dari localStorage bila props kosong
   const { effectiveRole, effectiveId } = useMemo(() => {
-    let r = role ?? (typeof window !== "undefined" ? (localStorage.getItem("role") || "lpk") : "lpk");
+    let r =
+      role ??
+      (typeof window !== "undefined" ? (localStorage.getItem("role") || "lpk") : "lpk");
     let id = userId ?? null;
     if (!id && typeof window !== "undefined") {
       try {
@@ -174,7 +168,7 @@ export default function AkunView({
         return;
       }
 
-      // refetch verifikasi (opsional, mengikuti modal lama)
+      // optional verifikasi
       try {
         const fresh = await getAccount(effectiveRole as any, effectiveId);
         const freshU = (fresh?.username || "").trim();
@@ -190,7 +184,7 @@ export default function AkunView({
         console.warn("[AkunView] Refetch username gagal", e);
       }
 
-      // sinkron state & localStorage
+      // sinkron state & cache
       setForm({ ...form, username: value });
       try {
         const cacheKey = `${effectiveRole}_username`;
@@ -221,29 +215,28 @@ export default function AkunView({
           <p className="font-medium text-black">Username</p>
 
           {!editing ? (
-            <div className="mt-1 border rounded-md px-3 py-2 bg-gray-50 flex items-center justify-between">
-              <p className="text-gray-700">{form.username || "Belum diatur"}</p>
-              <button
-                type="button"
-                className="text-[#0F67B1] hover:opacity-80 shadow-none px-0 py-0"
-                title="Ubah username"
-                aria-label="Ubah username"
-                onClick={() => {
-                  setDraft(form.username || "");
-                  setEditing(true);
-                }}
-              >
-                <HiOutlinePencilAlt size={20} />
-              </button>
-            </div>
+            // TAMPILAN BACA: klik seluruh field untuk masuk mode edit
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(form.username || "");
+                setEditing(true);
+              }}
+              className="mt-1 w-full text-left bg-white border border-[#0F67B1] rounded-md px-3 py-2"
+            >
+              <span className="text-gray-700">{form.username || "Belum diatur"}</span>
+            </button>
           ) : (
+            // MODE EDIT: langsung border-2 #0F67B1 (tanpa perlu klik lagi)
             <div className="mt-1 flex flex-col gap-2">
               <input
                 type="text"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Masukkan username baru"
-                className="w-full text-sm border rounded-md px-3 py-2 focus:outline-none focus:border-2 border-[#0F67B1] focus:border-[#0F67B1]"
+                autoFocus
+                onFocus={(e) => e.currentTarget.select()}
+                className="w-full text-sm rounded-md px-3 py-2 border-2 border-[#0F67B1] focus:!border-2 focus:!border-[#0F67B1] focus:!ring-0 focus:!outline-none"
                 disabled={saving}
               />
               <div className="flex gap-2 justify-end">
@@ -275,28 +268,17 @@ export default function AkunView({
         {/* KATA SANDI */}
         <div className="flex flex-col">
           <p className="font-medium text-black">Kata Sandi</p>
-          <div className="mt-1 border rounded-md px-3 py-2 bg-gray-50 flex items-center justify-between">
-            <p className="text-gray-700">{displayPassword}</p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="text-black hover:opacity-80 shadow-none px-0 py-0"
-                title={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-              >
-                {showPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
-              </button>
-              <button
-                type="button"
-                onClick={onChangePassword}
-                className="text-[#0F67B1] hover:opacity-80 shadow-none px-0 py-0"
-                title="Ganti kata sandi"
-                aria-label="Ganti kata sandi"
-              >
-                <IoIosArrowForward size={20} />
-              </button>
-            </div>
+          <div className="mt-1 border border-[#0F67B1] rounded-md px-3 py-2 bg-white flex items-center justify-between">
+            <p className="text-gray-700">{maskedPassword}</p>
+            <button
+              type="button"
+              onClick={onChangePassword}
+              className="text-[#0F67B1] hover:opacity-80 shadow-none px-0 py-0"
+              title="Ganti kata sandi"
+              aria-label="Ganti kata sandi"
+            >
+              <IoIosArrowForward size={20} />
+            </button>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import HeaderHome from "@/app/components/homePage/headerHomepage";
 import "aos/dist/aos.css";
 import Footer from "@/app/components/homePage/footer";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getLowonganById } from "@/services/lowongan";
 import { getCompanyById } from "@/services/company";
 import { Company } from "@/types/company";
@@ -21,7 +21,7 @@ import JobCardSkeleton from "@/app/components/homePage/jobCardSkeleton";
 import { ArrowRight } from "lucide-react";
 import Kuota from "@/app/components/homePage/cari-lowongan/detail-lowongan/Kuota";
 import { FullPageLoader } from "@/app/components/ui/LoadingSpinner";
-
+import { IoIosArrowRoundBack } from "react-icons/io";
 
 type Job = {
   id: number;
@@ -38,6 +38,8 @@ type Job = {
 
 export default function DetailLowonganPage() {
   const { id } = useParams();
+  const router = useRouter();
+
   const [lowongan, setLowongan] = useState<Lowongan | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [loadingLowongan, setLoadingLowongan] = useState(true);
@@ -74,13 +76,11 @@ export default function DetailLowonganPage() {
     })();
   }, [lowongan]);
 
-  // Sinkronkan related jobs dari data perusahaan (company.jobs) jika tersedia
   useEffect(() => {
     if (!company || !lowongan) return;
     setLoadingRelated(true);
-    // company.jobs sudah hanya memuat lowongan aktif (service menormalkan)
     const list = (company.jobs || [])
-      .filter((j) => j.id !== lowongan.id) // exclude current
+      .filter((j) => j.id !== lowongan.id)
       .map((j) => ({
         id: j.id,
         judul_lowongan: j.judul_lowongan,
@@ -118,6 +118,18 @@ export default function DetailLowonganPage() {
       <HeaderHome />
       <main>
         <Container className="py-6">
+          {/* === Tombol Kembali di atas === */}
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="mb-4 inline-flex items-center gap-1 text-black shadow-none px-0 py-0"
+            aria-label="Kembali"
+            title="Kembali"
+          >
+            <IoIosArrowRoundBack size={28} />
+            <span className="text-xl font-semibold">Kembali</span>
+          </button>
+
           <LowonganHeader
             name={lowongan.judul_lowongan}
             subtitle={lowongan.perusahaan?.nama_perusahaan ?? "-"}
@@ -134,22 +146,24 @@ export default function DetailLowonganPage() {
           <Persyaratan persyaratan={lowongan.persyaratan ?? []} />
           <Keuntungan benefit={lowongan.keuntungan ?? []} />
           <LamarButton />
-          <div className="mt-10 text-center">
-            <h3>Temukan Posisi Magang Impianmu Di sini</h3>
-          </div>
         </Container>
+
         {/* Section Lowongan lain dari perusahaan yang sama */}
         {relatedJobs.length > 0 && (
-          <Container className="py-10 border-t mt-12">
+          <Container className="py-5 border-t mt-5">
+            <div className="text-center mb-10">
+              <h3>Temukan Posisi Magang Impianmu Di sini</h3>
+              <p>MAVOKA memberikan kesempatan bagi siswa SMK untuk belajar langsung dan mendapatkan pengalaman nyata di dunia industri melalui program magang kami.</p>
+            </div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">
                 Lowongan <span className="text-[#0F67B1]">Aktif</span>
               </h2>
               <a
-                href="/list-perusahaan" /* TODO: ganti ke halaman perusahaan spesifik */
-                className="text-sm text-[#0F67B1] hover:underline flex items-center gap-1"
+                href="/lowongan" /* TODO: ganti ke halaman perusahaan spesifik */
+                className="text-sm text-[#0F67B1] flex items-center gap-1"
               >
-                Lihat semua lowongan <ArrowRight size={18} />
+                Semua lowongan <ArrowRight size={18} />
               </a>
             </div>
             {loadingRelated ? (

@@ -4,9 +4,9 @@ import HeaderHome from "@/app/components/homePage/headerHomepage";
 import "aos/dist/aos.css";
 import Footer from "@/app/components/homePage/footer";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getLpkById } from "@/services/lpk";
-import { Lpk } from "@/types/lpk"; 
+import { Lpk } from "@/types/lpk";
 
 // Cache stamp untuk bust caching jika logo diganti
 const CACHE_STAMP = Date.now();
@@ -44,14 +44,18 @@ function buildLogoCandidates(raw: any): string[] {
   push(withCache(`${base}/${rel}`));
   return out;
 }
+
 import DetailDescription from "@/app/components/homePage/detail-role/DetailDescription";
 import DetailHeader from "@/app/components/homePage/detail-role/DetailHeader";
 import BidangPelatihan from "@/app/components/homePage/listLpk/detail-lpk/BidangPelatihan";
 import { Container } from "@/app/components/Container";
 import { FullPageLoader } from "@/app/components/ui/LoadingSpinner";
+import { IoIosArrowRoundBack } from "react-icons/io";
 
 export default function DetailLPKPage() {
   const { id } = useParams();
+  const router = useRouter();
+
   const [lpk, setLpk] = useState<Lpk | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -84,18 +88,28 @@ export default function DetailLPKPage() {
       <Footer />
     </>
   );
-  if (!lpk)
-    return (
-      <p className="text-center py-10">
-        Data lembaga pelatihan tidak ditemukan
-      </p>
-    );
+
+  if (!lpk) {
+    return <p className="text-center py-10">Data lembaga pelatihan tidak ditemukan</p>;
+  }
 
   return (
     <>
       <HeaderHome />
       <main>
         <Container className="py-6">
+          {/* Tombol kembali */}
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="mb-4 inline-flex items-center gap-1 text-black shadow-none px-0 py-0"
+            aria-label="Kembali"
+            title="Kembali"
+          >
+            <IoIosArrowRoundBack size={28} />
+            <span className="text-xl font-semibold">Kembali</span>
+          </button>
+
           <DetailHeader
             name={lpk.name}
             logo={lpk.logoUrl ?? "/assets/img/placeholder-logo.png"}

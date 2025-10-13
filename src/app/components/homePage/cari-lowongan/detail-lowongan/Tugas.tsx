@@ -30,10 +30,10 @@ export default function Tugas({ tugas = [] }: Props) {
     <div className="mt-10 bg-white rounded-xl border p-6">
       <div className="flex items-center gap-2 mb-4">
         <PiBookBookmarkFill className="text-[#0F67B1] text-xl" />
-        <h2 className="font-bold text-lg">Tugas & Tanggung Jawab</h2>
+        <h3 className="font-bold">Tugas & Tanggung Jawab</h3>
       </div>
       {items.length > 0 ? (
-        <ol className="list-decimal pl-5 space-y-1 marker:font-medium">
+        <ol className="list-decimal pl-5 space-y-1 marker:font-medium text-sm">
           {items.map((item, index) => (
             <li key={index}>{item}</li>
           ))}

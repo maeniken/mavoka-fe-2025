@@ -32,7 +32,7 @@ export default function DetailDescription({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <IoInformationCircle className="text-[#0F67B1] text-xl" />
-            <h2 className="font-bold text-lg">{title}</h2>
+            <h3 className="font-bold ">{title}</h3>
           </div>
           <p className="text-gray-700 leading-relaxed">{description}</p>
           <hr className="my-4" />
@@ -43,7 +43,7 @@ export default function DetailDescription({
         <div>
           <div className="flex items-center gap-2 mb-4">
             <BiSolidSchool className="text-[#0F67B1] text-xl" />
-            <h2 className="font-bold text-lg">Informasi Sekolah</h2>
+            <h3 className="font-bold ">Informasi Sekolah</h3>
           </div>
           <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6 text-gray-700">
             {npsn && (
@@ -73,7 +73,7 @@ export default function DetailDescription({
         <div>
           <div className="flex items-center gap-2 mb-4">
             <BiSolidContact className="text-[#0F67B1] text-xl" />
-            <h2 className="font-bold text-lg">Informasi Kontak</h2>
+            <h3 className="font-bold ">Informasi Kontak</h3>
           </div>
           <div className="flex flex-col tablet:flex-row gap-10 text-gray-700">
             {email && (
@@ -102,7 +102,7 @@ export default function DetailDescription({
         <div>
           <div className="flex items-center gap-2 mb-4">
             <BiSolidContact className="text-[#0F67B1] text-xl" />
-            <h2 className="font-bold text-lg">Informasi Magang</h2>
+            <h3 className="font-bold">Informasi Magang</h3>
           </div>
           <div className="flex flex-col tablet:flex-row gap-10 text-gray-700">
             {deadline_lamaran && (
@@ -131,7 +131,7 @@ export default function DetailDescription({
         <div>
           <div className="flex items-center gap-2 mb-4">
             <BiSolidContact className="text-[#0F67B1] text-xl" />
-            <h2 className="font-bold text-lg">Informasi Kontak</h2>
+            <h3 className="font-bold">Informasi Kontak</h3>
           </div>
           <div className="flex flex-col tablet:flex-row gap-10 text-gray-700">
             {email && (

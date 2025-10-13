@@ -76,7 +76,7 @@ export default function DetailHeader({
             </div>
           )}
         </div>
-        <h1 className="text-xl font-bold text-[#0F67B1] text-center">
+        <h1 className="font-bold text-[#0F67B1] text-center">
           {name || "-"}
         </h1>
         {subtitle && (
