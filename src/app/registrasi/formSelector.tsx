@@ -1,6 +1,6 @@
 'use client'
 
-import FormSMK from './forms/formSMK'
+import FormSMK from './forms/formSiswa'
  import FormSekolah from './forms/formSekolah'
  import FormPerusahaan from './forms/formPerusahaan'
  import FormLembaga from './forms/formLembagaPelatihan'

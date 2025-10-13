@@ -135,15 +135,18 @@ export default function StatusVerifikasiTable() {
               : "Belum"),
         }));
 
+        // Explicitly exclude Siswa from admin verification table (backend should also exclude)
+        const withoutSiswa = mapped.filter((row) => row.role !== "Siswa");
+
         // Sort so that 'Belum' appears first, then by tanggal desc
-        mapped.sort((a, b) => {
+        withoutSiswa.sort((a, b) => {
           if (a.label === b.label) return 0;
           if (a.label === "Belum") return -1;
           if (b.label === "Belum") return 1;
           return 0;
         });
 
-        if (mounted) setData(mapped);
+        if (mounted) setData(withoutSiswa);
       } catch (err: any) {
         console.error("Failed to fetch verifikasi data:", err);
         if (mounted) {
@@ -178,7 +181,6 @@ export default function StatusVerifikasiTable() {
   const roleToRouteKey = (role: string) => {
     const map: Record<string, string> = {
       'Sekolah': 'sekolah',
-      'Siswa': 'siswa',
       'Perusahaan': 'perusahaan',
       'Lembaga Pelatihan': 'lpk',
     };
@@ -272,7 +274,6 @@ export default function StatusVerifikasiTable() {
           <option value="Perusahaan">Perusahaan</option>
           <option value="Lembaga Pelatihan">Lembaga Pelatihan</option>
           <option value="Sekolah">Sekolah</option>
-          <option value="Siswa">Siswa</option>
         </select>
 
         <select

@@ -57,6 +57,7 @@ export default function FilterBar({
           onChange={(e) => onChangeTahun(e.target.value)}
           className="h-9 min-w-[180px] rounded-md border border-[#B7B7B7] px-3 text-sm bg-white"
         >
+          <option value="">Semua Tahun</option>
           {tahunOptions.map((t) => (
             <option key={t} value={t}>
               {t}

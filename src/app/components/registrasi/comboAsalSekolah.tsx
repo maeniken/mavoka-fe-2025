@@ -8,6 +8,8 @@ type Props = {
   register: UseFormRegister<any>;
   setValue: UseFormSetValue<any>;
   error?: string;
+  value?: string; // sync from outer form (auto-fill)
+  disabled?: boolean; // disable input & dropdown
 };
 
 type Sekolah = {
@@ -15,7 +17,7 @@ type Sekolah = {
   nama_sekolah: string;
 };
 
-export default function ComboAsalSekolah({ register, setValue, error }: Props) {
+export default function ComboAsalSekolah({ register, setValue, error, value, disabled }: Props) {
   const [sekolahList, setSekolahList] = useState<Sekolah[]>([]);
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -36,11 +38,19 @@ export default function ComboAsalSekolah({ register, setValue, error }: Props) {
     fetchSekolah();
   }, []);
 
+  // Sync internal input when outer form value changes (e.g., auto-fill by NISN)
+  useEffect(() => {
+    if (typeof value === 'string') {
+      setSearch(value);
+    }
+  }, [value]);
+
   const filtered = sekolahList.filter((item) =>
     item.nama_sekolah.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleSelect = (value: string) => {
+    if (disabled) return;
     setSearch(value);
     setValue("nama_sekolah", value);
     setShowDropdown(false);
@@ -56,18 +66,20 @@ export default function ComboAsalSekolah({ register, setValue, error }: Props) {
         {...register("nama_sekolah", { required: "Nama sekolah wajib diisi" })}
         value={search}
         onChange={(e) => {
+          if (disabled) return;
           setSearch(e.target.value);
           setShowDropdown(true);
         }}
-        onFocus={() => setShowDropdown(true)}
+        onFocus={() => { if (!disabled) setShowDropdown(true); }}
         onBlur={() => setTimeout(() => setShowDropdown(false), 100)}
         placeholder="Nama Sekolah"
+        disabled={disabled}
         className={`w-full border text-xs mb-1 rounded-[6px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0F67B1] placeholder-gray-400 ${
           search ? "text-black" : "text-gray-400"
         } ${error ? "border-red-500" : "border-gray-300"}`}
       />
 
-      {showDropdown && search && (
+      {showDropdown && search && !disabled && (
         <ul className="absolute z-10 bg-white border w-full rounded shadow text-xs max-h-40 overflow-y-auto">
           {filtered.length > 0 ? (
             filtered.map((item) => (

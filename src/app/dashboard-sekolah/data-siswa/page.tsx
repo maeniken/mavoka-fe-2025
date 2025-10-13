@@ -17,7 +17,8 @@ function DataSiswaContent() {
   // filter
   const [jurusan, setJurusan] = useState<string>("");
   const [status, setStatus] = useState<"Semua" | "Aktif" | "Tidak">("Semua");
-  const [tahun, setTahun] = useState<string>("2025/2026");
+  // default kosong agar semua tahun tampil, siswa terbaru muncul di atas
+  const [tahun, setTahun] = useState<string>("");
 
   // pagination
   const [page, setPage] = useState(1);
