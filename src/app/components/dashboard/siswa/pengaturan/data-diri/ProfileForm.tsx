@@ -134,6 +134,26 @@ interface ProfileFormProps {
 }
 
 export default function ProfileForm({ form, handleChange }: ProfileFormProps) {
+  // Normalisasi nilai gender agar sesuai DB: 'L' (Laki-laki) | 'P' (Perempuan)
+  const toDbGender = (val: string): string => {
+    const v = (val || '').toString().trim().toLowerCase();
+    if (v === 'l' || v.startsWith('laki')) return 'L';
+    if (v === 'p' || v.startsWith('perem')) return 'P';
+    return '';
+  };
+
+  const genderValue = toDbGender(form.gender);
+
+  const onGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    // pastikan yang dikirim ke parent adalah 'L' atau 'P'
+    const value = toDbGender(e.target.value);
+    const proxyEvt = {
+      ...e,
+      target: { ...e.target, name: 'gender', value } as any,
+    } as React.ChangeEvent<HTMLSelectElement>;
+    handleChange(proxyEvt);
+  };
+
   return (
     <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Nama Lengkap (disabled) */}
@@ -173,13 +193,13 @@ export default function ProfileForm({ form, handleChange }: ProfileFormProps) {
         </label>
         <select
           name="gender"
-          value={form.gender}
-          onChange={handleChange}
+          value={genderValue}
+          onChange={onGenderChange}
           className="w-full text-sm border rounded-md px-3 py-2 border-[#0F67B1] focus:border-2 focus:border-[#0F67B1] focus:outline-none"
         >
           <option value="">Pilih</option>
-          <option value="Perempuan">Perempuan</option>
-          <option value="Laki-laki">Laki-laki</option>
+          <option value="L">Laki-laki</option>
+          <option value="P">Perempuan</option>
         </select>
       </div>
 

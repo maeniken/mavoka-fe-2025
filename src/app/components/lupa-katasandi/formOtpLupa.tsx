@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/app/components/registrasi/button";
+import { resendOtp } from "@/lib/api-otp";
 
 export default function FormOtpLupa() {
   const router = useRouter();
@@ -13,15 +14,18 @@ export default function FormOtpLupa() {
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [timeLeft, setTimeLeft] = useState(600);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Ambil email dari URL
+  // Ambil email dari sessionStorage (utama) atau URL (fallback)
   useEffect(() => {
+    const emailStore = typeof window !== 'undefined' ? sessionStorage.getItem('fp_email') : null;
     const emailParam = searchParams.get("email");
-    if (emailParam) {
-      setEmail(emailParam);
+    const picked = emailStore || emailParam;
+    if (picked) {
+      setEmail(picked);
     } else {
       alert("Email tidak ditemukan");
-      router.push("/lupa-katasandi");
+      router.push("/lupa-kataSandi");
     }
   }, [searchParams, router]);
 
@@ -71,16 +75,29 @@ export default function FormOtpLupa() {
       alert("Masukkan 6 digit kode OTP");
       return;
     }  
-
-    // ⬇️ MOCK verifikasi OTP
+    setError(null);
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    // Simpan sementara di sessionStorage agar tidak muncul di URL
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('fp_email', email);
+        sessionStorage.setItem('fp_otp', code);
+      } catch { /* ignore quota errors */ }
+    }
+    // Lanjut ke halaman reset tanpa query sensitif
+    router.push(`/lupa-kataSandi/reset-Sandi`);
     setLoading(false);
+  };
 
-    // Jika OTP benar → ke ubah sandi
-    router.push(
-      `/lupa-kataSandi/reset-Sandi?email=${encodeURIComponent(email)}`
-    );
+  const handleResend = async () => {
+    if (!email) return;
+    try {
+      await resendOtp({ email, role: "siswa" });
+      alert("Kode dikirim ulang");
+      setTimeLeft(600);
+    } catch (e: any) {
+      alert(e?.response?.data?.message || e?.message || "Gagal mengirim ulang OTP");
+    }
   };
 
   return (
@@ -89,6 +106,10 @@ export default function FormOtpLupa() {
       <p className="text-sm text-center text-gray-600">
         Kami telah mengirimkan kode ke email kamu. Silakan masukkan kode verifikasi di bawah.
       </p>
+
+      {error && (
+        <p className="text-sm text-red-600 text-center">{error}</p>
+      )}
 
       <div className="flex justify-between gap-2">
         {otp.map((digit, index) => (
@@ -114,7 +135,10 @@ export default function FormOtpLupa() {
         <span className="font-semibold">{formatTime(timeLeft)}</span>
       </p>
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" className="w-full flex items-center justify-center gap-2" disabled={loading} aria-busy={loading}>
+        {loading && (
+          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden />
+        )}
         {loading ? "Memproses..." : "Kirim"}
       </Button>
 
@@ -123,7 +147,7 @@ export default function FormOtpLupa() {
         <button
           type="button"
           className="text-[#0F67B1] font-semibold hover:underline bg-none border-none p-0 shadow-none"
-          onClick={() => alert("Kode dikirim ulang")}
+          onClick={handleResend}
         >
           Kirim Ulang
         </button>
