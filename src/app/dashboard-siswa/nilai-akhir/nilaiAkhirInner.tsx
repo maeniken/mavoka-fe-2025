@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import FinalTable from "@/app/components/dashboard/siswa/nilai-akhir/FinalTable";
 
 export default function Content() {
@@ -33,7 +34,9 @@ export default function Content() {
       <p className="text-gray-700 mb-4">
         Periode {fmt(periodStart)} - {fmt(periodEnd)}
       </p>
-      <FinalTable rows={rows} />
+       <Suspense fallback={<div>Memuat tabel…</div>}>
+        <FinalTable rows={rows} />
+      </Suspense>
     </div>
   );
 }

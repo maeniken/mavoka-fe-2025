@@ -119,11 +119,10 @@ function DataSiswaContent() {
 
 export default function DataSiswaPage() {
   return (
+    <Suspense fallback={<div className="p-5">Memuat data…</div>}>
     <DashboardLayout2>
-      {/* ✅ Suspense wajib untuk hook routing seperti useSearchParams di anak-anaknya */}
-      <Suspense fallback={<div className="p-5">Memuat data…</div>}>
         <DataSiswaContent />
-      </Suspense>
     </DashboardLayout2>
+    </Suspense>
   );
 }

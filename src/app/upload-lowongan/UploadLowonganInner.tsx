@@ -4,6 +4,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import ToggleTabs from "@/app/components/dashboard/toggleTab";
+import { Suspense } from "react";
 
 import TableDraftLowongan from "@/app/components/upload-lowongan-pelatihan/TableDraftLowongan";
 import TableLowonganTerpasang from "@/app/components/upload-lowongan-pelatihan/TableLowonganTerpasang";
@@ -26,7 +27,10 @@ export default function UploadLowonganInner() {
       localStorage.getItem("access_token_perusahaan") ||
       localStorage.getItem("access_token");
     console.log("👤 actor:", actor);
-    console.log("🔑 token_perusahaan:", token ? token.slice(0, 20) + "..." : null);
+    console.log(
+      "🔑 token_perusahaan:",
+      token ? token.slice(0, 20) + "..." : null
+    );
   }, []);
 
   const currentTab: TabType = useMemo(() => {
@@ -41,20 +45,25 @@ export default function UploadLowonganInner() {
   };
 
   return (
+    <Suspense fallback={<div className="p-5">Loading…</div>}>
     <div className="flex flex-col p-6">
       <h3 className="mb-5">Lowongan Perusahaan</h3>
 
-{/* HEADER: tabs kiri + tombol kanan (tanpa scroll, kompak di mobile) */}
-<div className="flex items-start justify-between gap-2 sm:gap-3">
-  {/* Tabs: ikut kecilkan font di mobile agar muat */}
-  <div className="flex-1 min-w-0 h-10 flex items-center text-[13px] sm:text-base">
-    <ToggleTabs<TabType> tabs={tabs} value={currentTab} onChange={handleChange} />
-  </div>
+      {/* HEADER: tabs kiri + tombol kanan (tanpa scroll, kompak di mobile) */}
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        {/* Tabs: ikut kecilkan font di mobile agar muat */}
+        <div className="flex-1 min-w-0 h-10 flex items-center text-[13px] sm:text-base">
+          <ToggleTabs<TabType>
+            tabs={tabs}
+            value={currentTab}
+            onChange={handleChange}
+          />
+        </div>
 
-  {/* Tombol: + kiri, 'Lowongan' atas, 'Baru' bawah; kompak di mobile */}
-  <Link
-    href="/upload-lowongan/lowongan-baru"
-    className="
+        {/* Tombol: + kiri, 'Lowongan' atas, 'Baru' bawah; kompak di mobile */}
+        <Link
+          href="/upload-lowongan/lowongan-baru"
+          className="
       shrink-0
       grid grid-cols-[auto_1fr] grid-rows-[auto_auto] items-center
       gap-x-2 px-3 py-2 sm:px-4 rounded-lg
@@ -62,18 +71,22 @@ export default function UploadLowonganInner() {
       leading-tight
       max-w-[150px] sm:max-w-[220px]  
     "
-    aria-label="Tambah lowongan baru"
-  >
-    <span className="row-span-2 text-lg sm:text-xl leading-none">+</span>
-    <span className="text-xs sm:text-sm ">Lowongan</span>
-    <span className="text-xs sm:text-sm ">Baru</span>
-  </Link>
-</div>
-
+          aria-label="Tambah lowongan baru"
+        >
+          <span className="row-span-2 text-lg sm:text-xl leading-none">+</span>
+          <span className="text-xs sm:text-sm ">Lowongan</span>
+          <span className="text-xs sm:text-sm ">Baru</span>
+        </Link>
+      </div>
 
       <div className="p-6 mt-5 bg-white rounded-xl">
-        {currentTab === "draft" ? <TableDraftLowongan /> : <TableLowonganTerpasang />}
+        {currentTab === "draft" ? (
+          <TableDraftLowongan />
+        ) : (
+          <TableLowonganTerpasang />
+        )}
       </div>
     </div>
+    </Suspense>
   );
 }

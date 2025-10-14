@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState,Suspense } from "react";
 import DashboardLayout2 from "@/app/components/dashboard/DashboardLayout2";
 import SchoolEvalFilterBar from "@/app/components/dashboard/sekolah/laporan-evaluasi/SchoolEvalFilterBar";
 import SchoolStudentsEvalTable from "@/app/components/dashboard/sekolah/laporan-evaluasi/SchoolStudentsEvalTable";
@@ -50,6 +50,7 @@ export default function Page() {
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   return (
+    <Suspense fallback={<div className="p-4">Memuat halaman…</div>}>
     <DashboardLayout2>
       <div className="p-4">
         <h3 className=" text-gray-900 mb-5">
@@ -97,5 +98,6 @@ export default function Page() {
         </div>
       </div>
     </DashboardLayout2>
+    </Suspense>
   );
 }

@@ -6,9 +6,11 @@ import { CardPelamar } from "@/app/components/dashboard/admin/CardPelamar";
 import { CardPemagang } from "@/app/components/dashboard/admin/CardPemagang";
 import { TotalPresentasePemagang } from "@/app/components/dashboard/admin/TotalPresentasePemagang";
 import { DetailVerifikasi } from "@/app/components/dashboard/admin/DetailVerifikasi";
+import { Suspense } from "react";
 
 export default function DashboardAdmin() {
   return (
+    <Suspense fallback={<div className="p-5">Memuat data…</div>}>
     <DashboardLayout>
       <div className="ml-5 mt-2 mr-5">
         <h1 className="font-bold text-[#0F67B1]">SELAMAT DATANG</h1>
@@ -41,5 +43,6 @@ export default function DashboardAdmin() {
         </div>
       </div>
     </DashboardLayout>
+    </Suspense>
   );
 }

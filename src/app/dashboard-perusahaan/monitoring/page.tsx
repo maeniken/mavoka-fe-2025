@@ -185,10 +185,10 @@ import Content from "./monitoringInner";
 
 export default function MonitoringPage() {
   return (
-    <DashboardLayout2>
-      <Suspense fallback={<div className="p-5">Memuat monitoring…</div>}>
+    <Suspense fallback={<div className="p-5">Memuat monitoring…</div>}>
+      <DashboardLayout2>
         <Content />
-      </Suspense>
-    </DashboardLayout2>
+      </DashboardLayout2>
+    </Suspense>
   );
 }

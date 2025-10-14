@@ -1,6 +1,6 @@
 'use client';
 import StudentApplicationsTable from "@/app/components/dashboard/siswa/pengajuan-magang/table";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState,  Suspense } from "react";
 import SuccessModal from "@/app/components/registrasi/PopupBerhasil";
 import { useApplicants } from "@/lib/mock-pelamar";
 import useMyApplications from "@/lib/useMyApplications";
@@ -153,6 +153,7 @@ export default function PengajuanMagangPage() {
           <div className="text-xs text-gray-600">Check Network tab for GET {process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api"}/pelamar</div>
         </div>
       )}
+      <Suspense fallback={<div className="p-3">Memuat data lamaran…</div>}>
       {USE_API ? (
         // Mode API: biarkan tabel melakukan fetch internal dan menampilkan skeleton & empty state sendiri
         <StudentApplicationsTable onAccept={handleAccept} onReject={handleReject} />
@@ -162,6 +163,7 @@ export default function PengajuanMagangPage() {
         // Mode mock: kirim data yang sudah difilter agar tabel tidak fetch API
         <StudentApplicationsTable data={filtered.map(mapApplicant)} onAccept={handleAccept} onReject={handleReject} />
       )}
+       </Suspense>
 
       <SuccessModal
         open={toastOpen}

@@ -1,9 +1,8 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
-
 import ToggleTabs from "@/app/components/dashboard/toggleTab";
 import TableDraftPelatihan from "@/app/components/upload-lowongan-pelatihan/TableDraftPelatihan";
 import TablePelatihanTerpasang from "@/app/components/upload-lowongan-pelatihan/TablePelatihanTerpasang";
@@ -55,6 +54,7 @@ export default function UploadPelatihanInner({
   };
 
   return (
+    <Suspense fallback={<div className="p-5">Loading…</div>}>
     <>
       {isFormLikePage ? (
         <div className="p-6">{children}</div>
@@ -89,5 +89,6 @@ export default function UploadPelatihanInner({
         </div>
       )}
     </>
+    </Suspense>
   );
 }

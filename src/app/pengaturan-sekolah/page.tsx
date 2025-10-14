@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import ProfileHeader from "@/app/components/pengaturan-profil/data-akun/ProfileHeader";
 import ProfileAvatar from "@/app/components/pengaturan-profil/data-akun/ProfileAvatar";
 import TampilProfil from "@/app/components/pengaturan-profil/data-akun/TampilProfil";
@@ -530,6 +530,7 @@ export default function ProfilePage() {
   }
 
   return (
+     <Suspense fallback={<div className="p-6">Loading…</div>}>
     <div className="bg-white p-6 rounded-lg shadow">
       <ProfileHeader role={role} />
 
@@ -581,5 +582,6 @@ export default function ProfilePage() {
         </>
       )}
     </div>
+    </Suspense>
   );
 }
