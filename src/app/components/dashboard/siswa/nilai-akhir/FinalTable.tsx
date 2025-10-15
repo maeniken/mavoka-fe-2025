@@ -13,7 +13,7 @@ type Row = {
 export default function FinalTable({ rows }: { rows: Row[] }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-2 md:p-2">
-      <div className="rounded-lg ring-1 ring-gray-200 overflow-x-auto">
+      <div className="rounded-lg  overflow-x-auto">
         <table className="w-full min-w-[980px] text-sm">
           <thead className="bg-[#0F67B1] text-white">
             <tr>

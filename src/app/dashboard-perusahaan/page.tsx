@@ -3,6 +3,7 @@ import * as React from "react";
 import DashboardTopCard from "@/app/components/dashboard/perusahaan/DashboardTopCard";
 import LowonganTerpasang from "@/app/components/dashboard/perusahaan/LowonganTerpasang";
 import LembagaPelatihan from "@/app/components/dashboard/perusahaan/LembagaPelatihan";
+import { Suspense } from "react";
 
 export default function DashboardPerusahaan() {
   const stats = [
@@ -12,6 +13,7 @@ export default function DashboardPerusahaan() {
   ];
 
   return (
+    <Suspense fallback={<div className="p-5">Memuat data…</div>}>
     <DashboardLayout2
       role="perusahaan"
     >
@@ -30,5 +32,6 @@ export default function DashboardPerusahaan() {
         </div>
       </div>
     </DashboardLayout2>
+    </Suspense>
   );
 }

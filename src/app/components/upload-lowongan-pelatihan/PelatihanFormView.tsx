@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiArrowLeft } from "react-icons/fi";
+import { BsTrash } from "react-icons/bs";
 import { PelatihanFormValues } from "@/types/pelatihan";
 
 type Mode = "create" | "detail" | "editDraft" | "editPublished";
@@ -33,6 +34,9 @@ export default function PelatihanFormView({
     kategori: initial?.kategori || "",
     capaian: initial?.capaian?.length ? [...initial.capaian] : [""],
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [submittingAction, setSubmittingAction] = useState<"draft" | "publish" | "save" | null>(null);
+  const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const setField =
     (k: keyof PelatihanFormValues) =>
@@ -48,6 +52,15 @@ export default function PelatihanFormView({
 
   const addCapaian = () =>
     setValues((v) => ({ ...v, capaian: [...v.capaian, ""] }));
+
+  const removeCapaian = (i: number) =>
+    setValues((v) => {
+      if (!Array.isArray(v.capaian) || v.capaian.length <= 1) {
+        return { ...v, capaian: [""] };
+      }
+      const next = v.capaian.filter((_, idx) => idx !== i);
+      return { ...v, capaian: next.length ? next : [""] };
+    });
 
   const canSubmit =
     values.namaPelatihan.trim() &&
@@ -92,6 +105,18 @@ export default function PelatihanFormView({
       </div>
 
       <div className="rounded-xl bg-white p-5 md:p-6 shadow-sm ">
+        {status && (
+          <div
+            className={`mb-4 rounded-md border px-3 py-2 text-sm ${
+              status.type === 'success'
+                ? 'border-green-300 bg-green-50 text-green-700'
+                : 'border-red-300 bg-red-50 text-red-700'
+            }`}
+            role="alert"
+          >
+            {status.message}
+          </div>
+        )}
         <div className="mb-4">
           <h3 className="font-bold">Data Pelatihan</h3>
           <p className="text-black">
@@ -173,6 +198,17 @@ export default function PelatihanFormView({
                     placeholder="Masukkan capaian..."
                     className={fieldCls()}
                   />
+                  {!readOnly && values.capaian.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeCapaian(i)}
+                      className="inline-flex items-center justify-center px-2.5 py-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50"
+                      title="Hapus capaian"
+                      aria-label="Hapus capaian"
+                    >
+                      <BsTrash size={16} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -184,28 +220,95 @@ export default function PelatihanFormView({
             {mode === "create" || mode === "editDraft" ? (
               <>
                 <button
-                  onClick={() => onSaveDraft?.(values)}
-                  className="px-4 py-2 rounded-lg border border-[#0F67B1] text-[#0F67B1] hover:bg-[#0F67B1]/5"
+                  onClick={async () => {
+                    if (!onSaveDraft) return;
+                    setStatus(null);
+                    setSubmitting(true);
+                    setSubmittingAction('draft');
+                    try {
+                      await onSaveDraft(values);
+                      setStatus({ type: 'success', message: 'Draft tersimpan.' });
+                    } catch (e: any) {
+                      const msg = e?.response?.data?.message || e?.message || 'Gagal menyimpan draft.';
+                      setStatus({ type: 'error', message: msg });
+                    } finally {
+                      setSubmitting(false);
+                      setSubmittingAction(null);
+                    }
+                  }}
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-lg border border-[#0F67B1] text-[#0F67B1] hover:bg-[#0F67B1]/5 disabled:opacity-50 inline-flex items-center gap-2"
                 >
-                  Simpan
+                  {submittingAction === 'draft' ? (
+                    <>
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#0F67B1]/40 border-t-[#0F67B1]" aria-hidden="true" />
+                      <span>Menyimpan…</span>
+                    </>
+                  ) : (
+                    <span>Simpan</span>
+                  )}
                 </button>
                 <button
-                  onClick={() => onPublish?.(values)}
-                  disabled={!canSubmit}
-                  className="px-4 py-2 rounded-lg bg-[#0F67B1] text-white hover:bg-[#0d5692] disabled:opacity-50"
+                  onClick={async () => {
+                    if (!onPublish) return;
+                    setStatus(null);
+                    setSubmitting(true);
+                    setSubmittingAction('publish');
+                    try {
+                      await onPublish(values);
+                      setStatus({ type: 'success', message: 'Pelatihan berhasil diunggah.' });
+                    } catch (e: any) {
+                      const msg = e?.response?.data?.message || e?.message || 'Gagal mengunggah pelatihan.';
+                      setStatus({ type: 'error', message: msg });
+                    } finally {
+                      setSubmitting(false);
+                      setSubmittingAction(null);
+                    }
+                  }}
+                  disabled={!canSubmit || submitting}
+                  className="px-4 py-2 rounded-lg bg-[#0F67B1] text-white hover:bg-[#0d5692] disabled:opacity-50 inline-flex items-center gap-2"
                 >
-                  Unggah
+                  {submittingAction === 'publish' ? (
+                    <>
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" aria-hidden="true" />
+                      <span>Mengunggah…</span>
+                    </>
+                  ) : (
+                    <span>Unggah</span>
+                  )}
                 </button>
               </>
             ) : null}
 
             {mode === "editPublished" ? (
               <button
-                onClick={() => onSave?.(values)}
-                disabled={!canSubmit}
-                className="px-4 py-2 rounded-lg bg-[#0F67B1] text-white hover:bg-[#0d5692] disabled:opacity-50"
+                onClick={async () => {
+                  if (!onSave) return;
+                  setStatus(null);
+                  setSubmitting(true);
+                  setSubmittingAction('save');
+                  try {
+                    await onSave(values);
+                    setStatus({ type: 'success', message: 'Perubahan tersimpan.' });
+                  } catch (e: any) {
+                    const msg = e?.response?.data?.message || e?.message || 'Gagal menyimpan perubahan.';
+                    setStatus({ type: 'error', message: msg });
+                  } finally {
+                    setSubmitting(false);
+                    setSubmittingAction(null);
+                  }
+                }}
+                disabled={!canSubmit || submitting}
+                className="px-4 py-2 rounded-lg bg-[#0F67B1] text-white hover:bg-[#0d5692] disabled:opacity-50 inline-flex items-center gap-2"
               >
-                Simpan
+                {submittingAction === 'save' ? (
+                  <>
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" aria-hidden="true" />
+                    <span>Menyimpan…</span>
+                  </>
+                ) : (
+                  <span>Simpan</span>
+                )}
               </button>
             ) : null}
           </div>

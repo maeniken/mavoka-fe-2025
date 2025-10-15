@@ -6,7 +6,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   nextBatchName: string;
-  onSave: (batch: Batch) => void;
+  onSave: (batch: Batch) => void | Promise<void>;
 };
 
 export default function ModalTambahBatch({
@@ -17,6 +17,7 @@ export default function ModalTambahBatch({
 }: Props) {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -70,11 +71,26 @@ export default function ModalTambahBatch({
             Batal
           </button>
           <button
-            onClick={() => onSave({ name: nextBatchName, start, end })}
-            className="px-4 py-2 rounded-lg bg-[#0F67B1] text-white hover:bg-[#0d5692]"
-            disabled={!start || !end}
+            onClick={async () => {
+              if (!start || !end || submitting) return;
+              setSubmitting(true);
+              try {
+                await onSave({ name: nextBatchName, start, end });
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            className="px-4 py-2 rounded-lg bg-[#0F67B1] text-white hover:bg-[#0d5692] disabled:opacity-50 inline-flex items-center gap-2"
+            disabled={!start || !end || submitting}
           >
-            Simpan
+            {submitting ? (
+              <>
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" aria-hidden="true" />
+                <span>Menyimpan…</span>
+              </>
+            ) : (
+              <span>Simpan</span>
+            )}
           </button>
         </div>
       </div>

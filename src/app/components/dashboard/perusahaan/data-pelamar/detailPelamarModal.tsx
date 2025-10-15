@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { FiUser } from "react-icons/fi";
 
 type DetailPelamarModalProps = {
   isOpen: boolean;
@@ -42,11 +43,20 @@ export default function DetailPelamarModal({
         {/* Body dengan scroll */}
         <div className="px-6 py-6 space-y-4 overflow-y-auto max-h-[70vh]">
           <div className="flex flex-col items-center">
-            <img
-              src={data.foto || "/default-avatar.png"}
-              alt={data.nama}
-              className="mb-4 h-20 w-20 rounded-full object-cover"
-            />
+            {data.foto ? (
+              <img
+                src={data.foto}
+                alt={data.nama}
+                className="mb-4 h-20 w-20 rounded-full object-cover"
+              />
+            ) : (
+              <div
+                aria-label="Tanpa foto profil"
+                className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-200 text-gray-500"
+              >
+                <FiUser size={36} />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4">

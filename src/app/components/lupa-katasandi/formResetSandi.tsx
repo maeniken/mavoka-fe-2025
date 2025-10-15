@@ -6,6 +6,7 @@ import Button from "@/app/components/registrasi/button";
 import SuccessModal from "@/app/components/registrasi/PopupBerhasil";
 import InputPassword from "@/app/components/registrasi/InputPassword"; // <- path komponenmu
 import React from "react";
+import { resetPasswordApi } from "@/lib/api-forgot";
 
 type FormValues = {
   password: string;
@@ -15,8 +16,9 @@ type FormValues = {
 export default function FormResetPassword() {
   const router = useRouter();
   const params = useSearchParams();
-  // kalau suatu saat perlu email untuk call API:
-  const email = params.get("email") ?? "";
+  // Prefer sessionStorage to avoid exposing secrets in URL, fallback to query if needed.
+  const email = (typeof window !== 'undefined' ? sessionStorage.getItem('fp_email') : null) ?? (params.get("email") ?? "");
+  const otp = (typeof window !== 'undefined' ? sessionStorage.getItem('fp_otp') : null) ?? (params.get("otp") ?? "");
 
   const {
     register,
@@ -26,11 +28,28 @@ export default function FormResetPassword() {
   } = useForm<FormValues>();
 
   const [open, setOpen] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const onSubmit = async (values: FormValues) => {
-    // MOCK – belum panggil endpoint, hanya simulasi
-    await new Promise((r) => setTimeout(r, 800));
-    setOpen(true);
+    setError(null);
+    try {
+      await resetPasswordApi({
+        email,
+        otp,
+        new_password: values.password,
+        new_password_confirmation: values.confirm,
+        role: "siswa",
+      });
+      setOpen(true);
+      // Clear sensitive data
+      if (typeof window !== 'undefined') {
+        try { sessionStorage.removeItem('fp_email'); } catch {}
+        try { sessionStorage.removeItem('fp_otp'); } catch {}
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.message || "Gagal memperbarui kata sandi";
+      setError(msg);
+    }
   };
 
   const handleClose = () => {
@@ -47,6 +66,10 @@ export default function FormResetPassword() {
         <p className="text-sm text-center text-gray-400">
           Silahkan buat kata sandi baru untuk akun anda
         </p>
+
+        {error && (
+          <p className="text-sm text-center text-red-600">{error}</p>
+        )}
 
         {/* Password baru */}
         <InputPassword

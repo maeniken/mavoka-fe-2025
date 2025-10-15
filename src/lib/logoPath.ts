@@ -49,6 +49,23 @@ export function buildLogoCandidates(input: any): LogoCandidatesResult {
   // 1. Absolute URL as-is
   if (/^https?:\/\//i.test(val)) {
     cands.push(val);
+    // Try to derive cross-fallbacks from absolute URL path
+    try {
+      const u = new URL(val);
+      const path = u.pathname.replace(/^\/+/, '');
+      // If it points to storage/perusahaan/logo/..., add legacy logos/perusahaan fallback
+      if (/^storage\/(perusahaan|sekolah|lpk)\/logo\//i.test(path)) {
+        const filename = path.replace(/^storage\/(?:perusahaan|sekolah|lpk)\/logo\//i, '');
+        cands.push(u.origin + '/logos/perusahaan/' + filename);
+      }
+      // If it points to legacy logos/perusahaan/..., add storage variant fallback
+      if (/^logos\/perusahaan\//i.test(path)) {
+        const filename = path.replace(/^logos\/perusahaan\//i, '');
+        cands.push(u.origin + '/storage/perusahaan/logo/' + filename);
+      }
+    } catch {
+      // ignore URL parsing errors
+    }
   } else {
     // 2. /storage/ or storage/
     if (/^\/storage\//i.test(val)) cands.push(origin + val);
@@ -72,12 +89,13 @@ export function buildLogoCandidates(input: any): LogoCandidatesResult {
     if (/^\/logos\//i.test(val)) cands.push(origin + val);
     if (/^logos\//i.test(val)) {
       cands.push(origin + '/' + val);
-      
       // Handle conversion from legacy logos format to storage format
       // Convert "logos/perusahaan/filename" to "storage/perusahaan/logo/filename"
       if (/^logos\/perusahaan\//i.test(val)) {
         const filename = val.replace(/^logos\/perusahaan\//i, '');
         cands.push(origin + '/storage/perusahaan/logo/' + filename);
+        // Also try without storage prefix as a permissive fallback
+        cands.push(origin + '/perusahaan/logo/' + filename);
       }
     }
 

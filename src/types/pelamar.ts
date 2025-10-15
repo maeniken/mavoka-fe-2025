@@ -1,5 +1,6 @@
 // Status & tipe data pelamar
-export type ApplicantStatus = 'lamar' | 'wawancara' | 'diterima' | 'ditolak';
+// Alur: lamar -> wawancara -> penawaran -> (diterima | ditolak)
+export type ApplicantStatus = 'lamar' | 'wawancara' | 'penawaran' | 'diterima' | 'ditolak';
 
 export type Position = {
   id: string;

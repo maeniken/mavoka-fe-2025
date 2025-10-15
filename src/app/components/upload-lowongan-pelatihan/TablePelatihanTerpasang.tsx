@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FaHistory } from "react-icons/fa";
 import { BiEdit } from "react-icons/bi";
@@ -10,7 +10,7 @@ import { Pelatihan, Batch } from "@/types/pelatihan";
 import ModalTambahBatch from "./ModalTambahBatch";
 import ModalHistoryBatch from "./ModalHistoryBatch";
 import ModalConfirmDelete from "./ModalConfirmDelete";
-import { getPelatihanSaya, deletePelatihan } from "@/lib/api-pelatihan";
+import { getPelatihanSaya, deletePelatihan, createBatch } from "@/lib/api-pelatihan";
 
 export default function TablePelatihanTerpasang() {
   const [rows, setRows] = useState<Pelatihan[]>([]);
@@ -24,6 +24,18 @@ export default function TablePelatihanTerpasang() {
   const [showAddBatch, setShowAddBatch] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (
+    type: "success" | "error",
+    message: string,
+    timeout = 3000
+  ) => {
+    setToast({ type, message });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), timeout);
+  };
 
 useEffect(() => {
   (async () => {
@@ -71,8 +83,10 @@ useEffect(() => {
       await deletePelatihan(selectedId);
       setRows((prev) => prev.filter((r) => r.id !== selectedId));
       setShowDelete(false);
+      showToast("success", "Data pelatihan berhasil dihapus.");
     } catch (e: any) {
-      alert(e?.response?.data?.message || "Gagal menghapus");
+      const msg = e?.response?.data?.message || e?.message || "Gagal menghapus";
+      showToast("error", msg);
     }
   };
 
@@ -115,11 +129,47 @@ useEffect(() => {
 
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center bg-white">
-                    Memuat…
-                  </td>
-                </tr>
+                <>
+                  {Array.from({ length: perPage }).map((_, i) => (
+                    <tr key={`skeleton-${i}`} className="border-t border-gray-100 animate-pulse">
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-6 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-40 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-80 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-24 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-72 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3 text-center">
+                        <div className="h-9 w-[140px] mx-auto bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3 text-center">
+                        <div className="h-9 w-[100px] mx-auto bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center items-center gap-3">
+                          <div className="h-4 w-4 bg-gray-200 rounded" />
+                          <div className="h-4 w-4 bg-gray-200 rounded" />
+                          <div className="h-4 w-4 bg-gray-200 rounded" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </>
               ) : error ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center bg-white text-red-600">
@@ -230,12 +280,26 @@ useEffect(() => {
         open={showAddBatch && selectedId !== null}
         onClose={() => setShowAddBatch(false)}
         nextBatchName={nextBatchName}
-        onSave={async ({ start, end }) => {
-          console.warn("TODO: panggil endpoint tambah batch untuk pelatihan", selectedId, {
-            start,
-            end,
-          });
-          setShowAddBatch(false);
+        onSave={async ({ start, end, name }) => {
+          if (!selectedId) return;
+          try {
+            const newBatch = await createBatch(selectedId, { name: name || nextBatchName, start, end });
+            setRows((prev) =>
+              prev.map((r) =>
+                r.id === selectedId
+                  ? {
+                      ...r,
+                      batches: [newBatch, ...(r.batches ?? [])],
+                    }
+                  : r
+              )
+            );
+            setShowAddBatch(false);
+            showToast("success", "Batch berhasil ditambahkan.");
+          } catch (e: any) {
+            const msg = e?.response?.data?.message || e?.message || "Gagal menambahkan batch";
+            showToast("error", msg);
+          }
         }}
       />
 
@@ -252,6 +316,35 @@ useEffect(() => {
         title="Hapus Pelatihan"
         message="Yakin Anda ingin menghapus pelatihan ini?"
       />
+
+      {toast && (
+        <div
+          className={`fixed bottom-4 right-4 z-50 rounded-md border px-4 py-3 shadow-md text-sm bg-white ${
+            toast.type === "success"
+              ? "border-green-300 text-green-700"
+              : "border-red-300 text-red-700"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-3">
+            <span
+              className={`mt-1 inline-block h-2 w-2 rounded-full ${
+                toast.type === "success" ? "bg-green-500" : "bg-red-500"
+              }`}
+              aria-hidden="true"
+            />
+            <div className="flex-1">{toast.message}</div>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-2 text-gray-400 hover:text-gray-600"
+              aria-label="Tutup notifikasi"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

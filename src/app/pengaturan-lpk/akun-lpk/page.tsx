@@ -117,18 +117,29 @@ export default function AkunLpkPage() {
   return (
     <>
       {!mounted ? (
-        <p className="text-sm text-gray-500">Menyiapkan...</p>
-      ) : activeTab === "akun" && (
-        <>
+        <div className="bg-white p-6 rounded-lg ">
           <AkunHeader />
+          <p className="text-sm text-gray-500">Menyiapkan...</p>
+        </div>
+      ) : activeTab === "akun" && (
+        <div className="bg-white p-6 rounded-lg">
+          <AkunHeader />
+
           {loading && (
             <div className="flex justify-center py-8">
-              <LoadingSpinner size={44} label="Memuat data akun..." labelPosition="below" styleType="dashed" />
+              <LoadingSpinner
+                size={44}
+                label="Memuat data akun..."
+                labelPosition="below"
+                styleType="dashed"
+              />
             </div>
           )}
+
           {!loading && error && (
             <p className="text-sm text-red-600">{error}</p>
           )}
+
           {!loading && !error && !isEditing && (
             <AkunView
               form={form}
@@ -136,21 +147,26 @@ export default function AkunLpkPage() {
               onChangePassword={() => setIsEditing(true)}
               onShowToast={showToast}
               userId={userId}
+              role="lpk"
             />
           )}
+
           {!loading && !error && isEditing && (
             <ChangePasswordFlow onCancel={() => setIsEditing(false)} />
           )}
-          {toast && (
-            <div
-              className={`fixed bottom-6 right-6 px-4 py-2 rounded shadow text-white text-sm transition-opacity ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
-              role="status"
-              aria-live="polite"
-            >
-              {toast.msg}
-            </div>
-          )}
-        </>
+        </div>
+      )}
+
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 px-4 py-2 rounded shadow text-white text-sm transition-opacity ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {toast.msg}
+        </div>
       )}
     </>
   );

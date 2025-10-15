@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { BiEdit } from "react-icons/bi";
 import { BsTrash } from "react-icons/bs";
 import Pagination from "@/app/components/dashboard/Pagination";
 import { Pelatihan } from "@/types/pelatihan";
 import { getPelatihanSaya, deletePelatihan } from "@/lib/api-pelatihan";
+import ModalConfirmDelete from "./ModalConfirmDelete";
 
 type Props = {
   initialData?: Pelatihan[];
@@ -27,6 +28,32 @@ export default function TableDraftPelatihan({
 
   const [perPage, setPerPage] = useState(10);
   const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showDelete, setShowDelete] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const toastTimer = useRef<number | null>(null);
+
+  const showToast = (type: 'success' | 'error', message: string, timeout = 2500) => {
+    setToast({ type, message });
+    if (toastTimer.current) {
+      window.clearTimeout(toastTimer.current);
+      toastTimer.current = null;
+    }
+    toastTimer.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimer.current && window.clearTimeout(toastTimer.current);
+      toastTimer.current = null;
+    }, timeout);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) {
+        window.clearTimeout(toastTimer.current);
+        toastTimer.current = null;
+      }
+    };
+  }, []);
 
 useEffect(() => {
   (async () => {
@@ -51,16 +78,23 @@ useEffect(() => {
     [rows, start, perPage]
   );
 
-  const handleDelete = async (id: number) => {
-    const ok = window.confirm("Yakin ingin menghapus pelatihan ini?");
-    if (!ok) return;
+  const openDelete = (id: number) => {
+    setSelectedId(id);
+    setShowDelete(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!selectedId) return;
     try {
-      await deletePelatihan(id);
-      setRows((prev) => prev.filter((r) => r.id !== id));
-      onDelete?.(id);
+      await deletePelatihan(selectedId);
+      setRows((prev) => prev.filter((r) => r.id !== selectedId));
+      onDelete?.(selectedId);
+      showToast('success', 'Data pelatihan berhasil dihapus.');
     } catch (e: any) {
-      alert(e?.response?.data?.message || "Gagal menghapus");
+      showToast('error', e?.response?.data?.message || 'Gagal menghapus data pelatihan.');
+    } finally {
+      setShowDelete(false);
+      setSelectedId(null);
     }
   };
 
@@ -100,11 +134,42 @@ useEffect(() => {
 
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center bg-white">
-                    Memuat…
-                  </td>
-                </tr>
+                <>
+                  {Array.from({ length: perPage }).map((_, i) => (
+                    <tr key={`skeleton-${i}`} className="border-t border-gray-100 animate-pulse">
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-6 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-40 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-80 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-24 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="h-3 w-72 bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3 text-center">
+                        <div className="h-9 w-[100px] mx-auto bg-gray-200 rounded" />
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center items-center gap-3">
+                          <div className="h-4 w-4 bg-gray-200 rounded" />
+                          <div className="h-4 w-4 bg-gray-200 rounded" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </>
               ) : error ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center bg-white text-red-600">
@@ -190,7 +255,7 @@ useEffect(() => {
 
                         <button
                           aria-label="Hapus"
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => openDelete(item.id)}
                           className="text-red-600 hover:opacity-80 shadow-none"
                           title="Hapus"
                         >
@@ -217,6 +282,46 @@ useEffect(() => {
         }}
         perPageOptions={[5, 10, 20]}
       />
+
+      <ModalConfirmDelete
+        open={showDelete && selectedId !== null}
+        onClose={() => setShowDelete(false)}
+        onConfirm={confirmDelete}
+        title=""
+        message="Apakah Anda Yakin Ingin Menghapus Data Pelatihan Magang ?"
+      />
+
+      {toast && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className={`fixed bottom-6 right-6 z-[60] min-w-[260px] max-w-[360px] rounded-lg px-4 py-3 shadow-lg border ${
+            toast.type === 'success'
+              ? 'bg-green-50 border-green-300 text-green-800'
+              : 'bg-red-50 border-red-300 text-red-800'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5">
+              {/* status dot */}
+              <span
+                className={`inline-block h-2.5 w-2.5 rounded-full ${
+                  toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                }`}
+              />
+            </div>
+            <div className="flex-1 text-sm font-medium">{toast.message}</div>
+            <button
+              onClick={() => setToast(null)}
+              className="text-xs opacity-70 hover:opacity-100"
+              aria-label="Tutup notifikasi"
+              title="Tutup"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

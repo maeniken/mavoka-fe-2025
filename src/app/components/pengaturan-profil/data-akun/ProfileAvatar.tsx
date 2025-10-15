@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
-import { Pencil } from 'lucide-react';
+import { RiEditLine } from "react-icons/ri";
 
 interface ProfileAvatarProps { src?: string; name: string; onEdit?: () => void; }
 
@@ -73,7 +73,7 @@ export default function ProfileAvatar({ src, name, onEdit }: ProfileAvatarProps)
           key={current}
           src={current}
           alt={name}
-          className="w-20 h-20 rounded-full object-cover border"
+          className="w-20 h-20 rounded-full object-cover border border-[#0F67B1]"
           onError={() => setIdx(i => (i + 1 < candidates.length ? i + 1 : i))}
         />
       ) : (
@@ -87,10 +87,10 @@ export default function ProfileAvatar({ src, name, onEdit }: ProfileAvatarProps)
         <button
           type="button"
           onClick={onEdit}
-          className="absolute right-0 bottom-0 bg-white border rounded-full p-1 text-[#0F67B1] shadow"
+          className="absolute right-0 bottom-0 bg-white border border-[#0F67B1] rounded-full p-1 text-black shadow"
           aria-label="Edit foto profil"
         >
-          <Pencil size={14} />
+          <RiEditLine size={14} />
         </button>
       )}
     </div>

@@ -4,7 +4,7 @@ import HeaderHome from "@/app/components/homePage/headerHomepage";
 import "aos/dist/aos.css";
 import Footer from "@/app/components/homePage/footer";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getCompanyById } from "@/services/company";
 import { Company } from "@/types/company";
 import DetailDescription from "@/app/components/homePage/detail-role/DetailDescription";
@@ -14,6 +14,7 @@ import { Container } from "@/app/components/Container";
 import JobCard from "@/app/components/homePage/jobCard";
 import { ArrowRight } from "lucide-react";
 import { FullPageLoader } from "@/app/components/ui/LoadingSpinner";
+import { IoIosArrowRoundBack } from "react-icons/io";
 
 type Job = {
   id: number;
@@ -30,6 +31,8 @@ type Job = {
 
 export default function DetailPerusahaanPage() {
   const { id } = useParams();
+  const router = useRouter();
+
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,18 +41,18 @@ export default function DetailPerusahaanPage() {
     (async () => {
       const data = await getCompanyById(id as string);
       if (data && data.jobs?.length) {
-        const base = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8000';
-        data.jobs = data.jobs.map(j => {
+        const base = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+        data.jobs = data.jobs.map((j) => {
           let logo = j.perusahaan?.logo_perusahaan ?? null;
           if (logo && !/^https?:\/\//i.test(logo)) {
-            logo = base.replace(/\/$/, '') + '/' + logo.replace(/^\//,'');
+            logo = base.replace(/\/$/, "") + "/" + logo.replace(/^\//, "");
           }
           return {
             ...j,
             perusahaan: {
               ...j.perusahaan,
               logo_perusahaan: logo,
-            }
+            },
           };
         });
       }
@@ -58,15 +61,17 @@ export default function DetailPerusahaanPage() {
     })();
   }, [id]);
 
-  if (loading) return (
-    <>
-      <HeaderHome />
-      <main>
-        <FullPageLoader label="Memuat detail perusahaan" />
-      </main>
-      <Footer />
-    </>
-  );
+  if (loading)
+    return (
+      <>
+        <HeaderHome />
+        <main>
+          <FullPageLoader label="Memuat detail perusahaan" />
+        </main>
+        <Footer />
+      </>
+    );
+
   if (!company)
     return <p className="text-center py-10">Data perusahaan tidak ditemukan</p>;
 
@@ -75,7 +80,22 @@ export default function DetailPerusahaanPage() {
       <HeaderHome />
       <main>
         <Container className="py-6">
-          <DetailHeader name={company.name} logo={company.logoUrl ?? undefined} />
+          {/* Tombol kembali */}
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="mb-4 inline-flex items-center gap-1 text-black shadow-none px-0 py-0"
+            aria-label="Kembali"
+            title="Kembali"
+          >
+            <IoIosArrowRoundBack size={28} />
+            <span className="text-xl font-semibold">Kembali</span>
+          </button>
+
+          <DetailHeader
+            name={company.name}
+            logo={company.logoUrl ?? undefined}
+          />
           <CompanyDetail totalLowongan={company.totalLowongan} />
           <DetailDescription
             type="organisasi"
@@ -85,8 +105,9 @@ export default function DetailPerusahaanPage() {
             address={company.address ?? "-"}
           />
 
-          <div className="mt-10 text-center">
+          <div className="mt-10 text-center mb-10">
             <h3>Temukan Posisi Magang Impianmu Di sini</h3>
+            <p>MAVOKA memberikan kesempatan bagi siswa SMK untuk belajar langsung dan mendapatkan pengalaman nyata di dunia industri melalui program magang kami.</p>
           </div>
 
           {company.jobs && company.jobs.length > 0 ? (
@@ -97,10 +118,10 @@ export default function DetailPerusahaanPage() {
                 </h2>
 
                 <a
-                  href="/list-perusahaan"
+                  href="/lowongan"
                   className="text-[#0F67B1] hover:underline flex items-center gap-1"
                 >
-                  Lihat semua lowongan <ArrowRight size={20} />
+                  Semua lowongan <ArrowRight size={20} />
                 </a>
               </div>
 

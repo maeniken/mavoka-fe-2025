@@ -14,9 +14,9 @@ type Props = {
   initial?: Partial<Lowongan>;
   onBack?: () => void;
 
-  onSaveDraft?: (payload: CreateLowonganPayload, id?: number) => void;
-  onUnggah?: (payload: CreateLowonganPayload, id?: number) => void;
-  onSave?: (payload: CreateLowonganPayload, id?: number) => void;
+  onSaveDraft?: (payload: CreateLowonganPayload, id?: number) => void | Promise<void>;
+  onUnggah?: (payload: CreateLowonganPayload, id?: number) => void | Promise<void>;
+  onSave?: (payload: CreateLowonganPayload, id?: number) => void | Promise<void>;
 
   /** aksi mana yang perlu menampilkan popup sukses */
   successFor?: ActionType[];
@@ -90,6 +90,9 @@ export default function LowonganFormView({
   const [showSuccess, setShowSuccess] = useState(false);
   const [successText, setSuccessText] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<ActionType | null>(null);
+  const [submitting, setSubmitting] = useState<ActionType | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof emptyForm, string>>>({});
 
   const readOnly = effectiveMode === "detail";
   const canShowDraft = effectiveMode === "create" || effectiveMode === "edit-draft";
@@ -99,7 +102,39 @@ export default function LowonganFormView({
   function onChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+
+    // Clear field error on change if now valid
+    const key = name as keyof typeof emptyForm;
+    setErrors((prev) => {
+      if (!(key in prev)) return prev;
+
+      const next = { ...prev };
+      const isValid = (() => {
+        if (key === "kuota") return !!value && Number(value) > 0;
+        if (key === "tugas" || key === "persyaratan" || key === "keuntungan") return textToArray(value).length > 0;
+        return !!String(value).trim();
+      })();
+      if (isValid) delete next[key];
+      return next;
+    });
   }
+
+  // Validate all fields required
+  const validateForm = () => {
+    const newErrors: Partial<Record<keyof typeof emptyForm, string>> = {};
+    if (!form.posisi.trim()) newErrors.posisi = "Wajib diisi.";
+    if (!form.deskripsi.trim()) newErrors.deskripsi = "Wajib diisi.";
+    if (!form.kuota || Number(form.kuota) <= 0) newErrors.kuota = "Wajib diisi.";
+    if (!form.deadline_lamaran) newErrors.deadline_lamaran = "Wajib diisi.";
+    if (!form.mulaiMagang) newErrors.mulaiMagang = "Wajib diisi.";
+    if (!form.selesaiMagang) newErrors.selesaiMagang = "Wajib diisi.";
+    if (!form.lokasi_penempatan.trim()) newErrors.lokasi_penempatan = "Wajib diisi.";
+    if (textToArray(form.tugas).length === 0) newErrors.tugas = "Wajib diisi.";
+    if (textToArray(form.persyaratan).length === 0) newErrors.persyaratan = "Wajib diisi.";
+    if (textToArray(form.keuntungan).length === 0) newErrors.keuntungan = "Wajib diisi.";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const buildPayload = (): CreateLowonganPayload => ({
     perusahaan_id: initial?.perusahaan_id ?? 0,
@@ -122,18 +157,30 @@ export default function LowonganFormView({
     return successMessage ?? "Perubahan berhasil disimpan.";
   };
 
-  const trigger = (action: ActionType, fn?: (p: CreateLowonganPayload, id?: number) => void) => {
+  const trigger = async (action: ActionType, fn?: (p: CreateLowonganPayload, id?: number) => void | Promise<void>) => {
+    setErrorMsg(null);
+    // prevent submit when invalid
+    const ok = validateForm();
+    if (!ok) {
+      setErrorMsg("Harap lengkapi semua field yang wajib diisi.");
+      return;
+    }
     const payload = buildPayload();
     const id = typeof initial?.id === "number" ? initial.id : undefined;
-    fn?.(payload, id);
-
-    setLastAction(action);
-
-    // pilih pesan sesuai action
-    const msg = getSuccessMessage(action);
-    if (successFor.includes(action) && msg) {
-      setSuccessText(msg);
-      setShowSuccess(true);
+    try {
+      setSubmitting(action);
+      await fn?.(payload, id);
+      setLastAction(action);
+      const msg = getSuccessMessage(action);
+      if (successFor.includes(action) && msg) {
+        setSuccessText(msg);
+        setShowSuccess(true);
+      }
+    } catch (e: any) {
+      const apiMsg = e?.response?.data?.message || e?.message;
+      setErrorMsg(apiMsg ? String(apiMsg) : "Gagal menyimpan perubahan.");
+    } finally {
+      setSubmitting(null);
     }
   };
 
@@ -148,6 +195,9 @@ export default function LowonganFormView({
     "mt-1 w-full rounded border px-3 py-2 text-sm disabled:bg-gray-100 " +
     "placeholder-[#858585] text-black border-[#B7B7B7] focus:border-[#0F67B1] focus:outline-none";
 
+  const inputClass = (field: keyof typeof emptyForm) =>
+    `${inputBase} ${errors[field] ? "!border-red-500 focus:!border-red-600" : ""}`;
+
   const footerButtons = useMemo(() => {
     if (readOnly) return null;
     return (
@@ -156,9 +206,10 @@ export default function LowonganFormView({
           <button
             type="button"
             onClick={() => trigger("draft", onSaveDraft)}
-            className="border border-[#0F67B1] bg-white text-[#0F67B1] px-4 py-2 rounded hover:bg-gray-100"
+            disabled={!!submitting}
+            className={`border border-[#0F67B1] bg-white text-[#0F67B1] px-4 py-2 rounded hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed`}
           >
-            Simpan Draft
+            {submitting === "draft" ? "Menyimpan…" : "Simpan Draft"}
           </button>
         )}
 
@@ -166,9 +217,10 @@ export default function LowonganFormView({
           <button
             type="button"
             onClick={() => trigger("save", onSave)}
-            className="border border-[#0F67B1] bg-white text-[#0F67B1] px-4 py-2 rounded hover:bg-gray-100"
+            disabled={!!submitting}
+            className={`border border-[#0F67B1] bg-white text-[#0F67B1] px-4 py-2 rounded hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed`}
           >
-            Simpan
+            {submitting === "save" ? "Menyimpan…" : "Simpan"}
           </button>
         )}
 
@@ -176,9 +228,10 @@ export default function LowonganFormView({
           <button
             type="button"
             onClick={() => trigger("unggah", onUnggah)}
-            className="bg-[#0F67B1] text-white px-4 py-2 rounded hover:bg-[#0c599b]"
+            disabled={!!submitting}
+            className={`bg-[#0F67B1] text-white px-4 py-2 rounded hover:bg-[#0c599b] disabled:opacity-60 disabled:cursor-not-allowed`}
           >
-            Unggah
+            {submitting === "unggah" ? "Mengunggah…" : "Unggah"}
           </button>
         )}
       </div>
@@ -196,6 +249,7 @@ export default function LowonganFormView({
     successMessageDraft,
     successMessageUnggah,
     form,
+    submitting,
   ]);
 
   return (
@@ -223,8 +277,9 @@ export default function LowonganFormView({
               onChange={onChange}
               readOnly={readOnly}
               placeholder="Masukkan posisi..."
-              className={inputBase}
+              className={inputClass("posisi")}
             />
+            {errors.posisi && <p className="text-xs text-red-600 mt-1">{errors.posisi}</p>}
           </div>
 
           <div>
@@ -236,8 +291,9 @@ export default function LowonganFormView({
               readOnly={readOnly}
               placeholder="Masukkan Deskripsi..."
               rows={4}
-              className={inputBase}
+              className={inputClass("deskripsi")}
             />
+            {errors.deskripsi && <p className="text-xs text-red-600 mt-1">{errors.deskripsi}</p>}
           </div>
 
           <div>
@@ -249,8 +305,9 @@ export default function LowonganFormView({
               onChange={onChange}
               readOnly={readOnly}
               placeholder="Masukkan kuota..."
-              className={inputBase}
+              className={inputClass("kuota")}
             />
+            {errors.kuota && <p className="text-xs text-red-600 mt-1">{errors.kuota}</p>}
           </div>
 
           <div>
@@ -261,8 +318,9 @@ export default function LowonganFormView({
               value={form.deadline_lamaran}
               onChange={onChange}
               readOnly={readOnly}
-              className={inputBase}
+              className={inputClass("deadline_lamaran")}
             />
+            {errors.deadline_lamaran && <p className="text-xs text-red-600 mt-1">{errors.deadline_lamaran}</p>}
           </div>
 
           <div>
@@ -273,8 +331,9 @@ export default function LowonganFormView({
               value={form.mulaiMagang}
               onChange={onChange}
               readOnly={readOnly}
-              className={inputBase}
+              className={inputClass("mulaiMagang")}
             />
+            {errors.mulaiMagang && <p className="text-xs text-red-600 mt-1">{errors.mulaiMagang}</p>}
           </div>
 
           <div>
@@ -285,8 +344,9 @@ export default function LowonganFormView({
               value={form.selesaiMagang}
               onChange={onChange}
               readOnly={readOnly}
-              className={inputBase}
+              className={inputClass("selesaiMagang")}
             />
+            {errors.selesaiMagang && <p className="text-xs text-red-600 mt-1">{errors.selesaiMagang}</p>}
           </div>
 
           <div>
@@ -298,8 +358,9 @@ export default function LowonganFormView({
               onChange={onChange}
               readOnly={readOnly}
               placeholder="Masukkan lokasi penempatan..."
-              className={inputBase}
+              className={inputClass("lokasi_penempatan")}
             />
+            {errors.lokasi_penempatan && <p className="text-xs text-red-600 mt-1">{errors.lokasi_penempatan}</p>}
           </div>
 
           <div>
@@ -311,8 +372,9 @@ export default function LowonganFormView({
               readOnly={readOnly}
               placeholder="Masukkan tugas dan tanggungjawab... (pisahkan baris/semicolon)"
               rows={4}
-              className={inputBase}
+              className={inputClass("tugas")}
             />
+            {errors.tugas && <p className="text-xs text-red-600 mt-1">{errors.tugas}</p>}
           </div>
 
           <div>
@@ -324,8 +386,9 @@ export default function LowonganFormView({
               readOnly={readOnly}
               placeholder="Masukkan persyaratan... (pisahkan baris/semicolon)"
               rows={4}
-              className={inputBase}
+              className={inputClass("persyaratan")}
             />
+            {errors.persyaratan && <p className="text-xs text-red-600 mt-1">{errors.persyaratan}</p>}
           </div>
 
           <div>
@@ -337,9 +400,14 @@ export default function LowonganFormView({
               readOnly={readOnly}
               placeholder="Masukkan keuntungan... (pisahkan baris/semicolon)"
               rows={4}
-              className={inputBase}
+              className={inputClass("keuntungan")}
             />
+            {errors.keuntungan && <p className="text-xs text-red-600 mt-1">{errors.keuntungan}</p>}
           </div>
+
+          {errorMsg && (
+            <p className="text-sm text-red-600 mt-2">{errorMsg}</p>
+          )}
 
           {footerButtons}
         </form>

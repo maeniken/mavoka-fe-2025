@@ -10,7 +10,7 @@ export default function Keuntungan({ benefit = [] }: Props) {
     <div className="mt-10 bg-white rounded-xl border p-6">
       <div className="flex items-center gap-2 mb-4">
         <BsJournalBookmarkFill className="text-[#0F67B1] text-xl" />
-        <h2 className="font-bold text-lg">Keuntungan</h2>
+        <h3 className="font-bold">Keuntungan</h3>
       </div>
       {benefit.length > 0 ? (
         <ol className="list-decimal list-inside space-y-1 text-sm leading-relaxed">

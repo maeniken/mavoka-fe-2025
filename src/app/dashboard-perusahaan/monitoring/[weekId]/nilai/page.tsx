@@ -10,7 +10,7 @@ export default function Page() {
 
   return (
     <DashboardLayout2>
-    <div className="p-3">
+    <div className="mt-1">
       {/* Back */}
         <button
           onClick={() => router.back()}

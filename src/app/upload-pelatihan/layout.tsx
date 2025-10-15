@@ -10,10 +10,10 @@ export default function UploadPelatihanLayout({
   children: React.ReactNode;
 }) {
   return (
-    <DashboardLayout2 role="lpk">
-      <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardLayout2 role="lpk">
         <UploadPelatihanInner>{children}</UploadPelatihanInner>
-      </Suspense>
-    </DashboardLayout2>
+      </DashboardLayout2>
+    </Suspense>
   );
 }

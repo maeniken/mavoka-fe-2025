@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, Suspense } from "react";
 import DashboardLayout2 from "@/app/components/dashboard/DashboardLayout2";
 import ToggleTabs from "@/app/components/dashboard/toggleTab";
 
@@ -34,8 +34,9 @@ export default function PengaturanLayoutInner() {
   };
 
   return (
+    <Suspense fallback={<div className="p-5">Loading…</div>}>
     <DashboardLayout2 role="sekolah">
-      <div className="flex flex-col h-full p-6">
+      <div className="flex flex-col h-full p-4">
         {/* Tabs */}
         <div className="flex shrink-0">
           <ToggleTabs<TabType>
@@ -46,10 +47,11 @@ export default function PengaturanLayoutInner() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 mt-5 h-full">
+        <div className="flex-1 overflow-y-auto mt-5 h-full">
           {currentTab === "data" ? <ProfilePage /> : <AkunPage />}
         </div>
       </div>
     </DashboardLayout2>
+    </Suspense>
   );
 }

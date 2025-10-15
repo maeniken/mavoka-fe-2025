@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import LowonganFormView from "@/app/components/upload-lowongan-pelatihan/LowonganFormView";
 import type { Lowongan, CreateLowonganPayload } from "@/types/lowongan";
-import { getLowonganByIdClient /*, updateLowonganDraft */ } from "@/lib/api-lowongan";
+import { getLowonganByIdClient, updateLowonganDraft, updateLowonganTerpasang } from "@/lib/api-lowongan";
+import { FullPageLoader } from "@/app/components/ui/LoadingSpinner";
 
 export default function PageEditLowonganDraft() {
   const router = useRouter();
@@ -23,19 +24,18 @@ export default function PageEditLowonganDraft() {
 
   // === HANDLERS ===
   // Simpan tetap sebagai draft
-  const handleSave = async (_payload: CreateLowonganPayload, _id?: number) => {
-    // kalau API sudah siap:
-    // await updateLowonganDraft(_id!, _payload);
-    // (biarkan kosong dulu — popup sukses ditangani LowonganFormView)
-    console.log("SAVE draft clicked for id:", _id, _payload);
+  const handleSave = async (payload: CreateLowonganPayload, _id?: number) => {
+    if (!_id) return;
+    await updateLowonganDraft(_id, payload);
   };
 
   // Jadikan draft -> terpasang
-  const handleUnggah = async (_payload: CreateLowonganPayload, _id?: number) => {
-    console.log("UNGGAH clicked for id:", _id, _payload);
+  const handleUnggah = async (payload: CreateLowonganPayload, _id?: number) => {
+    if (!_id) return;
+    await updateLowonganTerpasang(_id, payload);
   };
 
-  if (loading) return <div className="p-6">Memuat…</div>;
+  if (loading) return <FullPageLoader label="Memuat…" variant="primary" styleType="dashed" />;
   if (!initial) return <div className="p-6 text-red-600">Data tidak ditemukan.</div>;
 
   return (
@@ -43,8 +43,9 @@ export default function PageEditLowonganDraft() {
 <LowonganFormView
   mode="edit-draft"
   initial={initial}
-  onSave={(p, id) => {/* update draft */}}
-  onUnggah={(p, id) => {/* unggah */}}
+  onSaveDraft={handleSave}
+  onSave={handleSave}
+  onUnggah={handleUnggah}
   successFor={["save","unggah","draft"]}
   successMessageDraft="Data Lowongan Magang yang Anda inputkan berhasil disimpan di draft!"
   successMessageUnggah="Data Lowongan Magang yang Anda inputkan berhasil diunggah!"
