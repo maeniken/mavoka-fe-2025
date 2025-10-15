@@ -10,12 +10,11 @@ const nextConfig: NextConfig = {
         port: '8000',
         pathname: '/**',
       },
-      // Tambahkan domain production di bawah ini jika sudah ada, contoh:
-      // {
-      //   protocol: 'https',
-      //   hostname: 'api.mavoka.id',
-      //   pathname: '/**',
-      // },
+      {
+        protocol: 'https',
+        hostname: 'mavoka-dev-admin.fitacademy.id',
+        pathname: '/**',
+      },
     ],
   },
   // During local development, rewrite API calls to the Laravel backend
